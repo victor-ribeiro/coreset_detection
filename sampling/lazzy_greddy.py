@@ -8,7 +8,7 @@ from sklearn.metrics.pairwise import pairwise_distances
 from .craig.lazy_greedy import FacilityLocation, lazy_greedy_heap
 from .utils import timeit
 
-N_JOBS = mp.cpu_count() - 1
+N_JOBS = (mp.cpu_count() - 1) / 2
 
 
 @timeit
