@@ -37,7 +37,7 @@ if __name__ == "__main__":
         case "covtype":
             config = load_config(CONFIG["covtype"])
             dataset, target = load_covtype_dataset(config)
-            metrics = [root_mean_squared_error]
+            metrics = [accuracy_score, f1_score, precision_score, recall_score]
             print(f"Loaded {args.dataset} dataset with {dataset.shape[0]} samples.")
         case "adult":
             config = load_config(CONFIG["adult"])
