@@ -1,0 +1,4 @@
+{
+    "root": "adult/adult.csv",
+    "target": "income"
+}

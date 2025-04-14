@@ -1,0 +1,4 @@
+{
+    "root": "sgemm/sgemm_product.csv",
+    "target": "run_avg"
+}

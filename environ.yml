@@ -1,0 +1,21 @@
+name: coreset_detection
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - scikit-learn
+  - python
+  - numpy
+  - pandas
+  - matplotlib
+  - xgboost
+  - seaborn
+  - black
+  - flake8
+  - isort
+  - torchvision
+  - pytorch
+  - torchdata
+  - pyarrow

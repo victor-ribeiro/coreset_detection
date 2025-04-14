@@ -1,0 +1,4 @@
+{
+    "root": "covtype/covtype.data.gz",
+    "target": "cover_type"
+}

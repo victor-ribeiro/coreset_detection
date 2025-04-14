@@ -1,0 +1,4 @@
+{
+    "root": "bike_share/hour.csv",
+    "target": "cnt"
+}
