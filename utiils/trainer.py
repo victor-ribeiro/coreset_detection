@@ -50,7 +50,7 @@ def experiment(
                                 "model": learner.__name__,
                                 "method": sampler_name,
                                 "metric": metric.__name__,
-                                "frac": frac,
+                                "frac": 1,
                                 "test": metric(test_target, test_pred),
                                 "val": metric(val_target, val_pred),
                                 "train_time": end_time - init_train,
