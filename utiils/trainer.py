@@ -44,16 +44,32 @@ def experiment(
                 test_pred = model.predict(test_feat)
                 val_pred = model.predict(val_feat)
                 for metric in metrics:
-                    eval_metrics.append(
-                        {
-                            "model": learner.__name__,
-                            "metric": metric.__name__,
-                            "frac": 1,
-                            "test": metric(test_target, test_pred),
-                            "val": metric(val_target, val_pred),
-                            "train_time": end_time - init_train,
-                        }
-                    )
+                    try:
+                        eval_metrics.append(
+                            {
+                                "model": learner.__name__,
+                                "method": sampler_name,
+                                "metric": metric.__name__,
+                                "frac": frac,
+                                "test": metric(test_target, test_pred),
+                                "val": metric(val_target, val_pred),
+                                "train_time": end_time - init_train,
+                                "selection_time": t_,
+                            }
+                        )
+                    except:
+                        eval_metrics.append(
+                            {
+                                "model": learner.__name__,
+                                "method": sampler_name,
+                                "metric": metric.__name__,
+                                "frac": frac,
+                                "test": metric(test_target, test_pred, average="macro"),
+                                "val": metric(val_target, val_pred, average="macro"),
+                                "train_time": end_time - init_train,
+                                "selection_time": t_,
+                            }
+                        )
             else:
                 k = int(len(train_feat) * frac)
                 t_, sset = sampler(train_feat, k, **sampling_args)
@@ -63,17 +79,31 @@ def experiment(
                 test_pred = model.predict(test_feat)
                 val_pred = model.predict(val_feat)
                 for metric in metrics:
-                    eval_metrics.append(
-                        {
-                            "model": learner.__name__,
-                            "method": sampler_name,
-                            "metric": metric.__name__,
-                            "frac": frac,
-                            "test": metric(test_target, test_pred),
-                            "val": metric(val_target, val_pred),
-                            "train_time": end_time - init_train,
-                            "selection_time": t_,
-                        }
-                    )
+                    try:
+                        eval_metrics.append(
+                            {
+                                "model": learner.__name__,
+                                "method": sampler_name,
+                                "metric": metric.__name__,
+                                "frac": frac,
+                                "test": metric(test_target, test_pred),
+                                "val": metric(val_target, val_pred),
+                                "train_time": end_time - init_train,
+                                "selection_time": t_,
+                            }
+                        )
+                    except:
+                        eval_metrics.append(
+                            {
+                                "model": learner.__name__,
+                                "method": sampler_name,
+                                "metric": metric.__name__,
+                                "frac": frac,
+                                "test": metric(test_target, test_pred, average="macro"),
+                                "val": metric(val_target, val_pred, average="macro"),
+                                "train_time": end_time - init_train,
+                                "selection_time": t_,
+                            }
+                        )
             del model
     return eval_metrics
