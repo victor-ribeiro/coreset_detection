@@ -54,7 +54,7 @@ def experiment(
                                 "test": metric(test_target, test_pred),
                                 "val": metric(val_target, val_pred),
                                 "train_time": end_time - init_train,
-                                "selection_time": t_,
+                                "selection_time": 0,
                             }
                         )
                     except:
