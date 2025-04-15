@@ -21,7 +21,7 @@ def craig_baseline(data, K, b_size=256):
     for ds in batched(features, b_size):
         ds = np.array(ds)
         # D = pairwise_distances(features, ds, metric="euclidean", n_jobs=n_jobs)
-        D = pairwise_distances(ds, features, metric="euclidean", n_jobs=N_JOBS)
+        D = pairwise_distances(ds, features, metric="euclidean")
         v = V[start:end]
         D = D.max() - D
         B = int(len(D) * (K / len(features)))
@@ -102,7 +102,7 @@ def freddy(
         batched(dataset, batch_size),
         batched(idx, batch_size),
     ):
-        D = pairwise_distances(ds, metric="euclidean", n_jobs=N_JOBS)
+        D = pairwise_distances(ds, metric="euclidean")
         D = D.max(axis=1) - D
         size = len(D)
         # localmax = np.median(D, axis=0)
