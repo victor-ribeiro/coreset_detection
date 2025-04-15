@@ -30,10 +30,10 @@ def experiment(
     eval_metrics = []
     for sample in range(resample):
         train_feat, test_feat, train_target, test_target = train_test_split(
-            features, target, test_size=0.2, random_state=42
+            features, target, test_size=0.2
         )
         val_feat, test_feat, val_target, test_target = train_test_split(
-            test_feat, test_target, test_size=0.5, random_state=42
+            test_feat, test_target, test_size=0.5
         )
         for run in range(runs):
             print(f"Run {run + 1}/{runs} - Sample {sample + 1}/{resample}")
