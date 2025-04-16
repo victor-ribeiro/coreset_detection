@@ -92,7 +92,7 @@ def freddy(
     # basic config
     base_inc = _base_inc(alpha)
     idx = np.arange(len(dataset))
-    idx = np.random.permutation(idx)
+    # idx = np.random.permutation(idx)
     q = Queue()
     sset = []
     vals = []
