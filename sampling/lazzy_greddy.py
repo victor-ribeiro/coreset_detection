@@ -12,7 +12,7 @@ N_JOBS = (mp.cpu_count() - 1) / 2
 
 
 @timeit
-def craig_baseline(data, K, b_size=256):
+def craig_baseline(data, K, b_size=56):
     features = data.astype(np.single)
     V = np.arange(len(features), dtype=int).reshape(-1, 1)
     start = 0
