@@ -38,7 +38,7 @@ def experiment(
             )
         # for run in range(runs):
         run = sample % resample
-        print(f"Run {(run + sample) + 1}/{runs*resample} ")
+        print(f"Run {(sample) + 1}/{runs*resample} ")
         model = learner(**model_args) if model_args else learner()
         if not sampler:
             print("starting training")

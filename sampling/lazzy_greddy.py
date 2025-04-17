@@ -4,63 +4,47 @@ import numpy as np
 import multiprocessing as mp
 from itertools import batched
 from sklearn.metrics.pairwise import pairwise_distances
+from sklearn.cluster import BisectingKMeans
 
 from .craig.lazy_greedy import FacilityLocation, lazy_greedy_heap
+from .craig.util import get_orders_and_weights
 from .utils import timeit
 
 N_JOBS = mp.cpu_count() - 1
-
-# b_sise = 1024
-# Run 1/10 - Sample 1/5
-# Select time: 15.88 seconds
-# Training time: 0.06 seconds
-# Run 2/10 - Sample 1/5
-# Select time: 16.46 seconds
-# Training time: 0.05 seconds
-# Run 3/10 - Sample 1/5
-# Select time: 13.79 seconds
-# Training time: 0.04 seconds
-# Run 4/10 - Sample 1/5
-# Select time: 14.50 seconds
-# Training time: 0.04 seconds
-# Run 5/10 - Sample 1/5
-# Select time: 13.05 seconds
-# Training time: 0.06 seconds
-# Run 6/10 - Sample 1/5
-# Select time: 16.07 seconds
-# Training time: 0.04 seconds
-# Run 7/10 - Sample 1/5
-# Select time: 14.26 seconds
-# Training time: 0.04 seconds
-# Run 8/10 - Sample 1/5
-# Select time: 15.38 seconds
-# Training time: 0.04 second
-####################################
-# b_sise = 32
 
 
 @timeit
 def craig_baseline(data, K, b_size=4000):
     features = data.astype(np.single)
+    kmeans = BisectingKMeans()
+    y_ = kmeans.fit_predict(features)
     V = np.arange(len(features), dtype=int).reshape(-1, 1)
-    start = 0
-    end = start + b_size
-    sset = []
-    for ds in batched(features, b_size):
-        ds = np.array(ds)
-        D = pairwise_distances(ds, features, metric="euclidean", n_jobs=int(N_JOBS / 2))
-        # D = pairwise_distances(ds, features, metric="euclidean", n_jobs=2)
-        v = V[start:end]
-        D = D.max() - D
-        B = int(len(D) * (K / len(features)))
-        locator = FacilityLocation(D=D, V=v)
-        sset_idx, *_ = lazy_greedy_heap(F=locator, V=v, B=B)
-        sset_idx = np.array(sset_idx, dtype=int).reshape(1, -1)[0]
-        sset.append(sset_idx)
-        start += b_size
-        end += b_size
-    sset = np.hstack(sset)
+    B = int(len(features) * (K / len(features)))
+    sset, *_ = get_orders_and_weights(B, features, "euclidean", 0, V, b_size, y=y_)
     return sset
+
+
+# def craig_baseline(data, K, b_size=4000):
+#     features = data.astype(np.single)
+#     V = np.arange(len(features), dtype=int).reshape(-1, 1)
+#     start = 0
+#     end = start + b_size
+#     sset = []
+#     for ds in batched(features, b_size):
+#         ds = np.array(ds)
+#         D = pairwise_distances(ds, features, metric="euclidean", n_jobs=int(N_JOBS / 2))
+#         # D = pairwise_distances(ds, features, metric="euclidean", n_jobs=2)
+#         v = V[start:end]
+#         D = D.max() - D
+#         B = int(len(D) * (K / len(features)))
+#         locator = FacilityLocation(D=D, V=v)
+#         sset_idx, *_ = lazy_greedy_heap(F=locator, V=v, B=B)
+#         sset_idx = np.array(sset_idx, dtype=int).reshape(1, -1)[0]
+#         sset.append(sset_idx)
+#         start += b_size
+#         end += b_size
+#     sset = np.hstack(sset)
+#     return sset
 
 
 REDUCE = {"mean": np.mean, "sum": np.sum}
@@ -98,12 +82,12 @@ def _base_inc(alpha=1):
 
 
 def utility_score(e, sset, /, acc=0, alpha=0.1, beta=1.1):
-    gamma = (alpha + beta) / 2
+    print(alpha, beta)
     norm = 1 / _base_inc(alpha)
     argmax = np.maximum(e, sset)
     f_norm = alpha / (sset.sum() + acc + 1)
     util = norm * math.log(1 + (argmax.sum() + acc) * f_norm)
-    return util + (math.log(1 + ((sset.sum() + acc) ** gamma)) * beta)
+    return util + (math.log(1 + ((sset.sum() + acc))) * beta)
 
 
 @timeit
