@@ -8,11 +8,39 @@ from sklearn.metrics.pairwise import pairwise_distances
 from .craig.lazy_greedy import FacilityLocation, lazy_greedy_heap
 from .utils import timeit
 
-N_JOBS = (mp.cpu_count() - 1) / 2
+N_JOBS = mp.cpu_count() - 1
+
+# b_sise = 1024
+# Run 1/10 - Sample 1/5
+# Select time: 15.88 seconds
+# Training time: 0.06 seconds
+# Run 2/10 - Sample 1/5
+# Select time: 16.46 seconds
+# Training time: 0.05 seconds
+# Run 3/10 - Sample 1/5
+# Select time: 13.79 seconds
+# Training time: 0.04 seconds
+# Run 4/10 - Sample 1/5
+# Select time: 14.50 seconds
+# Training time: 0.04 seconds
+# Run 5/10 - Sample 1/5
+# Select time: 13.05 seconds
+# Training time: 0.06 seconds
+# Run 6/10 - Sample 1/5
+# Select time: 16.07 seconds
+# Training time: 0.04 seconds
+# Run 7/10 - Sample 1/5
+# Select time: 14.26 seconds
+# Training time: 0.04 seconds
+# Run 8/10 - Sample 1/5
+# Select time: 15.38 seconds
+# Training time: 0.04 second
+####################################
+# b_sise = 32
 
 
 @timeit
-def craig_baseline(data, K, b_size=56):
+def craig_baseline(data, K, b_size=4000):
     features = data.astype(np.single)
     V = np.arange(len(features), dtype=int).reshape(-1, 1)
     start = 0
@@ -20,8 +48,8 @@ def craig_baseline(data, K, b_size=56):
     sset = []
     for ds in batched(features, b_size):
         ds = np.array(ds)
-        # D = pairwise_distances(features, ds, metric="euclidean", n_jobs=n_jobs)
-        D = pairwise_distances(ds, features, metric="euclidean")
+        D = pairwise_distances(features, ds, metric="euclidean", n_jobs=int(N_JOBS / 2))
+        # D = pairwise_distances(ds, features, metric="euclidean", n_jobs=2)
         v = V[start:end]
         D = D.max() - D
         B = int(len(D) * (K / len(features)))

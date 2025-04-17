@@ -36,12 +36,14 @@ def experiment(
             test_feat, test_target, test_size=0.5
         )
         for run in range(runs):
-            print(f"Run {run + 1}/{runs} - Sample {sample + 1}/{resample}")
+            print(f"Run {(run + sample) + 1}/{runs*resample} ")
             model = learner(**model_args) if model_args else learner()
             if not sampler:
+                print("starting training")
                 init_train = perf_counter()
                 model.fit(train_feat, train_target)
                 end_time = perf_counter()
+                print(f"Training time: {end_time - init_train:.2f} seconds")
                 test_pred = model.predict(test_feat)
                 val_pred = model.predict(val_feat)
                 for metric in metrics:
@@ -73,10 +75,14 @@ def experiment(
                         )
             else:
                 k = int(len(train_feat) * frac)
+                print(f"Selecting {k/len(train_feat) * 100:.2f}% samples")
                 t_, sset = sampler(train_feat, k, **sampling_args)
+                print(f"Select time: {t_:.2f} seconds")
+                print("starting training")
                 init_train = perf_counter()
                 model.fit(train_feat[sset], train_target[sset])
                 end_time = perf_counter()
+                print(f"Training time: {end_time - init_train:.2f} seconds")
                 test_pred = model.predict(test_feat)
                 val_pred = model.predict(val_feat)
                 for metric in metrics:

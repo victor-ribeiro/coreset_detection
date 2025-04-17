@@ -122,7 +122,7 @@ if __name__ == "__main__":
         sampler=sampler,
         sampling_args=spln_args,
         metrics=metrics,
-        model_args={"n_jobs": 4},
+        # model_args={"n_jobs": 2},
     )
     name = f"{_parse_expperiment_name(args)}.csv"
     output_dir = Path("outputs") / args.name / args.model / args.dataset
