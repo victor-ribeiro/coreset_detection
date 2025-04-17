@@ -48,7 +48,7 @@ def craig_baseline(data, K, b_size=4000):
     sset = []
     for ds in batched(features, b_size):
         ds = np.array(ds)
-        D = pairwise_distances(features, ds, metric="euclidean", n_jobs=int(N_JOBS / 2))
+        D = pairwise_distances(ds, features, metric="euclidean", n_jobs=int(N_JOBS / 2))
         # D = pairwise_distances(ds, features, metric="euclidean", n_jobs=2)
         v = V[start:end]
         D = D.max() - D
