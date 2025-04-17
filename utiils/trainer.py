@@ -28,89 +28,91 @@ def experiment(
     )
 
     eval_metrics = []
-    for sample in range(resample):
-        train_feat, test_feat, train_target, test_target = train_test_split(
-            features, target, test_size=0.2
-        )
-        val_feat, test_feat, val_target, test_target = train_test_split(
-            test_feat, test_target, test_size=0.5
-        )
-        for run in range(runs):
-            print(f"Run {(run + sample) + 1}/{runs*resample} ")
-            model = learner(**model_args) if model_args else learner()
-            if not sampler:
-                print("starting training")
-                init_train = perf_counter()
-                model.fit(train_feat, train_target)
-                end_time = perf_counter()
-                print(f"Training time: {end_time - init_train:.2f} seconds")
-                test_pred = model.predict(test_feat)
-                val_pred = model.predict(val_feat)
-                for metric in metrics:
-                    try:
-                        eval_metrics.append(
-                            {
-                                "model": learner.__name__,
-                                "method": sampler_name,
-                                "metric": metric.__name__,
-                                "frac": 1,
-                                "test": metric(test_target, test_pred),
-                                "val": metric(val_target, val_pred),
-                                "train_time": end_time - init_train,
-                                "selection_time": 0,
-                            }
-                        )
-                    except:
-                        eval_metrics.append(
-                            {
-                                "model": learner.__name__,
-                                "method": sampler_name,
-                                "metric": metric.__name__,
-                                "frac": frac,
-                                "test": metric(test_target, test_pred, average="macro"),
-                                "val": metric(val_target, val_pred, average="macro"),
-                                "train_time": end_time - init_train,
-                                "selection_time": 0,
-                            }
-                        )
-            else:
-                k = int(len(train_feat) * frac)
-                print(f"Selecting {k/len(train_feat) * 100:.2f}% samples")
-                t_, sset = sampler(train_feat, k, **sampling_args)
-                print(f"Select time: {t_:.2f} seconds")
-                print("starting training")
-                init_train = perf_counter()
-                model.fit(train_feat[sset], train_target[sset])
-                end_time = perf_counter()
-                print(f"Training time: {end_time - init_train:.2f} seconds")
-                test_pred = model.predict(test_feat)
-                val_pred = model.predict(val_feat)
-                for metric in metrics:
-                    try:
-                        eval_metrics.append(
-                            {
-                                "model": learner.__name__,
-                                "method": sampler_name,
-                                "metric": metric.__name__,
-                                "frac": frac,
-                                "test": metric(test_target, test_pred),
-                                "val": metric(val_target, val_pred),
-                                "train_time": end_time - init_train,
-                                "selection_time": t_,
-                            }
-                        )
-                    except:
-                        eval_metrics.append(
-                            {
-                                "model": learner.__name__,
-                                "method": sampler_name,
-                                "metric": metric.__name__,
-                                "frac": frac,
-                                "test": metric(test_target, test_pred, average="macro"),
-                                "val": metric(val_target, val_pred, average="macro"),
-                                "train_time": end_time - init_train,
-                                "selection_time": t_,
-                            }
-                        )
+    for sample in range(resample * runs):
+        if sample % resample == 0:
+            train_feat, test_feat, train_target, test_target = train_test_split(
+                features, target, test_size=0.2
+            )
+            val_feat, test_feat, val_target, test_target = train_test_split(
+                test_feat, test_target, test_size=0.5
+            )
+        # for run in range(runs):
+        run = sample % resample
+        print(f"Run {(run + sample) + 1}/{runs*resample} ")
+        model = learner(**model_args) if model_args else learner()
+        if not sampler:
+            print("starting training")
+            init_train = perf_counter()
+            model.fit(train_feat, train_target)
+            end_time = perf_counter()
+            print(f"Training time: {end_time - init_train:.2f} seconds")
+            test_pred = model.predict(test_feat)
+            val_pred = model.predict(val_feat)
+            for metric in metrics:
+                try:
+                    eval_metrics.append(
+                        {
+                            "model": learner.__name__,
+                            "method": sampler_name,
+                            "metric": metric.__name__,
+                            "frac": 1,
+                            "test": metric(test_target, test_pred),
+                            "val": metric(val_target, val_pred),
+                            "train_time": end_time - init_train,
+                            "selection_time": 0,
+                        }
+                    )
+                except:
+                    eval_metrics.append(
+                        {
+                            "model": learner.__name__,
+                            "method": sampler_name,
+                            "metric": metric.__name__,
+                            "frac": frac,
+                            "test": metric(test_target, test_pred, average="macro"),
+                            "val": metric(val_target, val_pred, average="macro"),
+                            "train_time": end_time - init_train,
+                            "selection_time": 0,
+                        }
+                    )
+        else:
+            k = int(len(train_feat) * frac)
+            print(f"Selecting {k/len(train_feat) * 100:.2f}% samples")
+            t_, sset = sampler(train_feat, k, **sampling_args)
+            print(f"Select time: {t_:.2f} seconds")
+            print("starting training")
+            init_train = perf_counter()
+            model.fit(train_feat[sset], train_target[sset])
+            end_time = perf_counter()
+            print(f"Training time: {end_time - init_train:.2f} seconds")
+            test_pred = model.predict(test_feat)
+            val_pred = model.predict(val_feat)
+            for metric in metrics:
+                try:
+                    eval_metrics.append(
+                        {
+                            "model": learner.__name__,
+                            "method": sampler_name,
+                            "metric": metric.__name__,
+                            "frac": frac,
+                            "test": metric(test_target, test_pred),
+                            "val": metric(val_target, val_pred),
+                            "train_time": end_time - init_train,
+                            "selection_time": t_,
+                        }
+                    )
+                except:
+                    eval_metrics.append(
+                        {
+                            "model": learner.__name__,
+                            "method": sampler_name,
+                            "metric": metric.__name__,
+                            "frac": frac,
+                            "test": metric(test_target, test_pred, average="macro"),
+                            "val": metric(val_target, val_pred, average="macro"),
+                            "train_time": end_time - init_train,
+                            "selection_time": t_,
+                        }
+                    )
             del model
     return eval_metrics

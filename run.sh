@@ -6,7 +6,7 @@ do
     for method in craig pmi_kmeans freddy; 
     # for method in pmi_kmeans none; 
     do 
-        python main.py --dataset covtype --method $method  --model DecisionTreeClassifier --run 10 --resample 5 --train_frac $frac 
+        python main.py --dataset bike_share --method $method  --model DecisionTreeRegressor --run 10 --resample 5 --train_frac $frac 
     done
 done
 
