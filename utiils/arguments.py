@@ -85,7 +85,7 @@ def get_args():
         required=DATASETS.required,
     )
 
-    parser.add_argument("--alpha", "-a", type=float, default=10e-3, required=False)
+    parser.add_argument("--alpha", "-a", type=float, default=0.15, required=False)
     parser.add_argument("--tol", "-t", type=float, default=10e-3, required=False)
     parser.add_argument("--max_iter", "-i", type=int, default=100, required=False)
     parser.add_argument("--train_frac", type=float, default=0.1, required=False)
