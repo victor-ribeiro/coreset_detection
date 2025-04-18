@@ -78,8 +78,10 @@ def experiment(
         else:
             k = int(len(train_feat) * frac)
             print(f"Selecting {k/len(train_feat) * 100:.2f}% samples")
-            t_, sset = sampler(train_feat, k, **sampling_args)
-            print(f"Select time: {t_:.2f} seconds")
+            t_, sset = sampler(train_feat, K=k, **sampling_args)
+            print(
+                f"Select time: {t_:.2f} seconds. Selected {len(sset)}/{len(train_feat)}"
+            )
             print("starting training")
             init_train = perf_counter()
             model.fit(train_feat[sset], train_target[sset])

@@ -12,22 +12,20 @@ result.selection_time = result.selection_time.fillna(0)
 
 result["total_time"] = result.train_time + result.selection_time
 
-# %%
 import seaborn as sns
 
 sns.pointplot(result, x="frac", y="test", hue="method")
-plt.yscale("log")
-plt.show()
-# %%
-sns.pointplot(result, x="frac", y="val", hue="method")
-plt.yscale("log")
+# plt.yscale("log")
 plt.show()
 
-# %%
+sns.pointplot(result, x="frac", y="val", hue="method")
+plt.show()
+
+
 sns.pointplot(result, x="frac", y="total_time", hue="method")
 plt.show()
 
-# %%
+
 sns.pointplot(result, x="frac", y="selection_time", hue="method")
 plt.show()
 # %%

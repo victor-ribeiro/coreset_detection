@@ -90,7 +90,7 @@ def get_args():
     parser.add_argument("--max_iter", "-i", type=int, default=100, required=False)
     parser.add_argument("--train_frac", type=float, default=0.1, required=False)
     parser.add_argument("--random_seed", type=int, default=42, required=False)
-    parser.add_argument("--batch_size", type=int, default=256, required=False)
+    parser.add_argument("--batch_size", type=int, default=1024, required=False)
     parser.add_argument("--beta", "-b", type=float, default=0.75, required=False)
 
     return parser.parse_args()

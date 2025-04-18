@@ -7,7 +7,7 @@ from sklearn.metrics.pairwise import pairwise_distances
 from sklearn.cluster import BisectingKMeans
 
 from .craig.lazy_greedy import FacilityLocation, lazy_greedy_heap
-from .craig.util import get_orders_and_weights
+from .craig.util import get_orders_and_weights, get_facility_location_submodular_order
 from .utils import timeit
 
 N_JOBS = mp.cpu_count() - 1
@@ -15,36 +15,30 @@ N_JOBS = mp.cpu_count() - 1
 
 @timeit
 def craig_baseline(data, K, b_size=4000):
+    print(b_size)
     features = data.astype(np.single)
-    kmeans = BisectingKMeans()
-    y_ = kmeans.fit_predict(features)
-    V = np.arange(len(features), dtype=int).reshape(-1, 1)
-    B = int(len(features) * (K / len(features)))
-    sset, *_ = get_orders_and_weights(B, features, "euclidean", 0, V, b_size, y=y_)
+    idx = np.arange(len(features), dtype=int)
+    start = 0
+    end = start + b_size
+    sset = []
+    ds = batched(features, b_size)
+    ds = map(np.array, ds)
+    D = map(lambda x: pairwise_distances(x, features, metric="l1"), ds)
+    D = map(lambda x: np.max(x, axis=0) - x, D)
+    V = batched(idx, b_size)
+    locator = map(
+        lambda d, v: FacilityLocation(D=d, V=np.array(v).reshape(-1, 1)), D, V
+    )
+    V = batched(idx, b_size)
+    sset = map(
+        lambda loc, v: lazy_greedy_heap(
+            F=loc, V=np.array(v).reshape(-1, 1), B=int(len(v) * (K / len(features)))
+        ),
+        locator,
+        batched(idx, b_size),
+    )
+    sset = np.hstack(sset)
     return sset
-
-
-# def craig_baseline(data, K, b_size=4000):
-#     features = data.astype(np.single)
-#     V = np.arange(len(features), dtype=int).reshape(-1, 1)
-#     start = 0
-#     end = start + b_size
-#     sset = []
-#     for ds in batched(features, b_size):
-#         ds = np.array(ds)
-#         D = pairwise_distances(ds, features, metric="euclidean", n_jobs=int(N_JOBS / 2))
-#         # D = pairwise_distances(ds, features, metric="euclidean", n_jobs=2)
-#         v = V[start:end]
-#         D = D.max() - D
-#         B = int(len(D) * (K / len(features)))
-#         locator = FacilityLocation(D=D, V=v)
-#         sset_idx, *_ = lazy_greedy_heap(F=locator, V=v, B=B)
-#         sset_idx = np.array(sset_idx, dtype=int).reshape(1, -1)[0]
-#         sset.append(sset_idx)
-#         start += b_size
-#         end += b_size
-#     sset = np.hstack(sset)
-#     return sset
 
 
 REDUCE = {"mean": np.mean, "sum": np.sum}
@@ -82,12 +76,67 @@ def _base_inc(alpha=1):
 
 
 def utility_score(e, sset, /, acc=0, alpha=0.1, beta=1.1):
-    print(alpha, beta)
     norm = 1 / _base_inc(alpha)
     argmax = np.maximum(e, sset)
     f_norm = alpha / (sset.sum() + acc + 1)
     util = norm * math.log(1 + (argmax.sum() + acc) * f_norm)
     return util + (math.log(1 + ((sset.sum() + acc))) * beta)
+
+
+def entropy(x):
+    x = np.abs(x)
+    total = x.sum()
+    p = x / total
+    p = p[p > 0]
+    return -(p * np.log2(p)).sum()
+
+
+# @timeit
+# def freddy(
+#     dataset,
+#     base_inc=_base_inc,
+#     alpha=0.15,
+#     metric="similarity",
+#     K=1,
+#     batch_size=1000,
+#     beta=0.75,
+#     return_vals=False,
+# ):
+#     base_inc = entropy(dataset)
+#     idx = np.arange(len(dataset), dtype=int)
+#     # idx = np.random.permutation(idx)
+#     # dataset = dataset[idx]
+#     q = Queue()
+#     sset = []
+#     vals = []
+#     argmax = 0
+#     inc = 0
+#     for ds, V in zip(
+#         batched(dataset, batch_size),
+#         batched(idx, batch_size),
+#     ):
+#         size = len(ds)
+#         _ = [q.push(base_inc, i) for i in zip(V, range(size))]
+#         while q and len(sset) < K:
+#             score, idx_s = q.head
+#             score_s = entropy(dataset[sset + [idx_s[0]]])
+#             inc = score_s - entropy(dataset[sset])
+#             if not q:
+#                 break
+#             score_t, idx_t = q.head
+#             if (inc > 0) or inc > score_t:
+#                 sset.append(idx_s[0])
+#                 vals.append(score)
+#                 base_inc += inc
+#             else:
+#                 q.push(inc, idx_s)
+#             q.push(score_t, idx_t)
+#             # q.push(inc, idx_t)
+#     np.random.shuffle(sset)
+
+#     if return_vals:
+#         return np.array(vals), sset
+#     return np.array(sset)
 
 
 @timeit
@@ -97,14 +146,15 @@ def freddy(
     alpha=0.15,
     metric="similarity",
     K=1,
-    batch_size=256,
+    batch_size=1000,
     beta=0.75,
     return_vals=False,
 ):
     # basic config
     base_inc = _base_inc(alpha)
     idx = np.arange(len(dataset))
-    # idx = np.random.permutation(idx)
+    idx = np.random.permutation(idx)
+    dataset = dataset[idx]
     q = Queue()
     sset = []
     vals = []
@@ -114,10 +164,10 @@ def freddy(
         batched(dataset, batch_size),
         batched(idx, batch_size),
     ):
-        D = pairwise_distances(ds, metric="euclidean")
+        D = pairwise_distances(ds)
         D = D.max(axis=1) - D
-        size = len(D)
-        # localmax = np.median(D, axis=0)
+        D = D.max() - D
+        size = len(ds)
         localmax = np.amax(D, axis=1)
         argmax += localmax.sum()
         _ = [q.push(base_inc, i) for i in zip(V, range(size))]
@@ -130,7 +180,7 @@ def freddy(
                 break
             score_t, idx_t = q.head
             if inc > score_t:
-                score = utility_score(s, localmax, acc=argmax, alpha=alpha, beta=beta)
+                # score = utility_score(s, localmax, acc=argmax, alpha=alpha, beta=beta)
                 localmax = np.maximum(localmax, s)
                 sset.append(idx_s[0])
                 vals.append(score)
@@ -140,4 +190,4 @@ def freddy(
     np.random.shuffle(sset)
     if return_vals:
         return np.array(vals), sset
-    return sset
+    return np.array(sset)

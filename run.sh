@@ -1,11 +1,13 @@
 # !/bin/bash
 
-dataset=covtype
-model=XGBClassifier
+dataset=bike_share
+model=XGBRegressor
+# dataset=adult
+# model=XGBClassifier
 
 for frac in .1 .2 .3 .4 .5 .6 .7 .8 .9;
 do
-    for method in craig pmi_kmeans freddy random;  
+    for method in craig freddy pmi_kmeans random ;  
     do 
         python main.py --dataset $dataset --method $method  --model $model --run 10 --resample 5 --train_frac $frac 
     done
