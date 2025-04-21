@@ -63,7 +63,7 @@ def pmi_kmeans_sampler(
     h_pc = entropy(np.dot(dataset, clusters.T))
     h_c = entropy(clusters)
     h_p = entropy(dataset)
-    pmi = (h_p - h_pc) / h_c
+    pmi = (h_p - h_c + h_pc) * np.log(1 + alpha * kmeans.inertia_)
 
     pmi = dist * pmi
     sset = np.argsort(pmi, kind="heapsort")[::-1]
