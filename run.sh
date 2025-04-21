@@ -1,7 +1,7 @@
 # !/bin/bash
 
-dataset=bike_share
-model=XGBRegressor
+dataset=adult
+model=XGBClassifier
 # dataset=adult
 # model=XGBClassifier
 
@@ -14,4 +14,4 @@ do
 done
 
 
-# python main.py --dataset $dataset --method none  --model $model --run 10 --resample 5 --train_frac 1
+python main.py --dataset $dataset --method none  --model $model --run 10 --resample 5 --train_frac 1

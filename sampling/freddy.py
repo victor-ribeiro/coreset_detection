@@ -35,7 +35,9 @@ def _n_cluster(dataset, alpha=1, max_iter=100, tol=10e-2):
 
 @timeit
 def kmeans_sampler(dataset, K, alpha=1, tol=10e-3, max_iter=500):
-    clusters = _n_cluster(dataset, alpha, max_iter, tol)
+    kmeans = BisectingKMeans(n_clusters=10)
+    kmeans.fit(dataset)
+    clusters = kmeans.cluster_centers_
     print(f"Found {len(clusters)} clusters, tol: {tol}")
     dist = pairwise_distances(dataset, clusters)
     dist -= np.amax(dist, axis=0)
@@ -52,10 +54,10 @@ def pmi_kmeans_sampler(
     tol=10e-3,
     max_iter=500,
 ):
-    # kmeans = BisectingKMeans(n_clusters=10)
-    # kmeans.fit(dataset)
-    # clusters = kmeans.cluster_centers_
-    clusters = _n_cluster(dataset, alpha, max_iter, tol)
+    # TODO kmeans fixo
+    kmeans = BisectingKMeans(n_clusters=10)
+    kmeans.fit(dataset)
+    clusters = kmeans.cluster_centers_
     print(f"Found {len(clusters)} clusters, tol: {tol}")
     dist = pairwise_distances(clusters, dataset, metric="l1").sum(axis=0)
     h_pc = entropy(np.dot(dataset, clusters.T))
