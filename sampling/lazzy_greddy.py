@@ -15,7 +15,15 @@ N_JOBS = mp.cpu_count() - 1
 
 @timeit
 def craig_baseline(data, K, b_size=4000):
-    sset, *_ = get_orders_and_weights(B=K, X=data, metric="euclidean", smtk=0)
+    features = data.astype(np.single)
+    V = np.arange(len(features), dtype=int)
+    start = 0
+    D = pairwise_distances(features, features, n_jobs=N_JOBS)
+    D = D.max(axis=1) - D
+    locator = FacilityLocation(D=D, V=V.reshape(-1, 1))
+
+    sset, *_ = lazy_greedy_heap(F=locator, V=V, B=K)
+    sset = np.array(sset)
     return sset
 
 
