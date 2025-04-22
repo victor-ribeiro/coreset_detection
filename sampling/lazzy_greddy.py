@@ -13,30 +13,54 @@ from .utils import timeit
 N_JOBS = mp.cpu_count() - 1
 
 
+# @timeit
+# def craig_baseline(data, K, b_size=4000):
+#     features = data.astype(np.single)
+#     idx = np.arange(len(features), dtype=int)
+#     start = 0
+#     end = start + b_size
+#     sset = []
+#     ds = batched(features, b_size)
+#     ds = map(np.array, ds)
+#     D = map(lambda x: pairwise_distances(x, features, n_jobs=N_JOBS), ds)
+#     D = map(lambda x: np.max(x) - x, D)
+#     V = batched(idx, b_size)
+#     locator = map(
+#         lambda d, v: FacilityLocation(D=d, V=np.array(v).reshape(-1, 1)), D, V
+#     )
+#     V = batched(idx, b_size)
+#     sset = map(
+#         lambda loc, v: lazy_greedy_heap(
+#             F=loc, V=np.array(v), B=int(len(v) * (K / len(features)))
+#         ),
+#         locator,
+#         batched(idx, b_size),
+#     )
+#     sset = [s for s, _ in sset]
+#     sset = np.hstack(sset)
+#     return sset
+
+
 @timeit
-def craig_baseline(data, K, b_size=4000):
+def craig_baseline(data, K, b_size=1024):
     features = data.astype(np.single)
-    idx = np.arange(len(features), dtype=int)
+    V = np.arange(len(features), dtype=int).reshape(-1, 1)
     start = 0
     end = start + b_size
     sset = []
-    ds = batched(features, b_size)
-    ds = map(np.array, ds)
-    D = map(lambda x: pairwise_distances(x, features, n_jobs=N_JOBS), ds)
-    D = map(lambda x: np.max(x) - x, D)
-    V = batched(idx, b_size)
-    locator = map(
-        lambda d, v: FacilityLocation(D=d, V=np.array(v).reshape(-1, 1)), D, V
-    )
-    V = batched(idx, b_size)
-    sset = map(
-        lambda loc, v: lazy_greedy_heap(
-            F=loc, V=np.array(v), B=int(len(v) * (K / len(features)))
-        ),
-        locator,
-        batched(idx, b_size),
-    )
-    sset = [s for s, _ in sset]
+    n_jobs = int(N_JOBS // 2)
+    for ds in batched(features, b_size):
+        ds = np.array(ds)
+        D = pairwise_distances(ds, features, metric="euclidean", n_jobs=n_jobs)
+        v = V[start:end]
+        D = D.max() - D
+        B = int(len(D) * (K / len(features)))
+        locator = FacilityLocation(D=D, V=v)
+        sset_idx, *_ = lazy_greedy_heap(F=locator, V=v, B=B)
+        sset_idx = np.array(sset_idx, dtype=int).reshape(1, -1)[0]
+        sset.append(sset_idx)
+        start += b_size
+        end += b_size
     sset = np.hstack(sset)
     return sset
 
