@@ -28,7 +28,7 @@ def _n_cluster(dataset, alpha=1, max_iter=100, tol=10e-2):
         val[idx] = np.log(1 + sampler.inertia_ * alpha / val[val > 0].max() / base)
 
         if abs(val[:idx].min() - val[idx]) < tol:
-            return sampler.cluster_centers_
+            return sampler.inertia_, sampler.cluster_centers_
     # return sampler.cluster_centers_
     return ValueError("Does not converge")
 
@@ -38,6 +38,7 @@ def kmeans_sampler(dataset, K, alpha=1, tol=10e-3, max_iter=500):
     kmeans = BisectingKMeans(n_clusters=10)
     kmeans.fit(dataset)
     clusters = kmeans.cluster_centers_
+    base = np.log(1 + alpha)
     print(f"Found {len(clusters)} clusters, tol: {tol}")
     dist = pairwise_distances(dataset, clusters)
     dist -= np.amax(dist, axis=0)
@@ -51,21 +52,29 @@ def pmi_kmeans_sampler(
     dataset,
     K,
     alpha=1,
-    tol=10e-3,
+    tol=1,
     max_iter=500,
 ):
+    base = np.log2(K)
     # TODO kmeans fixo
-    kmeans = BisectingKMeans(n_clusters=10)
-    kmeans.fit(dataset)
-    clusters = kmeans.cluster_centers_
+    # kmeans = BisectingKMeans(n_clusters=10)
+    # kmeans.fit(dataset)
+    # clusters = kmeans.cluster_centers_
+    inertia_, clusters = _n_cluster(dataset, alpha=alpha, max_iter=max_iter, tol=tol)
     print(f"Found {len(clusters)} clusters, tol: {tol}")
-    dist = pairwise_distances(clusters, dataset, metric="l1").sum(axis=0)
+    dist = pairwise_distances(clusters, dataset)
+    dist = np.exp(dist - dist.max(axis=0))
+    dist /= dist.sum()
+
+    # dist[dist > dist.mean()] = tol
     h_pc = entropy(np.dot(dataset, clusters.T))
     h_c = entropy(clusters)
     h_p = entropy(dataset)
-    pmi = (h_p - h_c + h_pc) * np.log(1 + alpha * kmeans.inertia_)
+    pmi = np.log2(K)
 
-    pmi = dist * pmi
+    pmi = dist.max(axis=0) * (h_p / h_pc)  # / pmi + inertia_
+    # pmi = np.exp(pmi) / np.exp(pmi).sum()
+    # sset = np.argsort(pmi, kind="heapsort")
     sset = np.argsort(pmi, kind="heapsort")[::-1]
 
     return sset[:K]

@@ -5,10 +5,9 @@ model=XGBClassifier
 # dataset=adult
 # model=XGBClassifier
 
-for method in craig ;  
+for method in pmi_kmeans;  
 do
-    # for frac in .1 .2 .3 .4 .5 .6 .7 .8 .9;
-    for frac in .1 ;
+   for frac in .1  .2 .3 .4 .5  .6 .7 .8 .9;
     do 
         python main.py --dataset $dataset --method $method  --model $model --run 10 --resample 5 --train_frac $frac 
     done
