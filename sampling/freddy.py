@@ -55,25 +55,16 @@ def pmi_kmeans_sampler(
     tol=1,
     max_iter=500,
 ):
-    base = np.log2(K)
-    # TODO kmeans fixo
-    # kmeans = BisectingKMeans(n_clusters=10)
-    # kmeans.fit(dataset)
-    # clusters = kmeans.cluster_centers_
-    inertia_, clusters = _n_cluster(dataset, alpha=alpha, max_iter=max_iter, tol=tol)
+    _, clusters = _n_cluster(dataset, alpha=alpha, max_iter=max_iter, tol=tol)
     print(f"Found {len(clusters)} clusters, tol: {tol}")
     dist = pairwise_distances(clusters, dataset)
-    dist = np.exp(dist - dist.max(axis=0))
-    dist /= dist.sum()
-
-    # dist[dist > dist.mean()] = tol
-    h_pc = entropy(np.dot(dataset, clusters.T))
+    softmax = np.exp(dist - dist.max())
+    softmax /= dist.sum()
     h_c = entropy(clusters)
     h_p = entropy(dataset)
     pmi = np.log2(K)
 
-    pmi = dist.max(axis=0) * (h_p / h_pc)  # / pmi + inertia_
-    # pmi = np.exp(pmi) / np.exp(pmi).sum()
+    pmi = ((1 - softmax) / (dist * (h_p - h_c))).sum(axis=0)
     # sset = np.argsort(pmi, kind="heapsort")
     sset = np.argsort(pmi, kind="heapsort")[::-1]
 
