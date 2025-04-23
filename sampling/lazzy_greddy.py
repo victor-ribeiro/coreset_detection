@@ -7,7 +7,6 @@ from sklearn.metrics.pairwise import pairwise_distances
 from sklearn.cluster import BisectingKMeans
 
 from .craig.lazy_greedy import FacilityLocation, lazy_greedy_heap
-from .craig.util import get_orders_and_weights, get_facility_location_submodular_order
 from .utils import timeit
 
 # N_JOBS = mp.cpu_count() - 1
