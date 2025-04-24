@@ -36,33 +36,10 @@ def craig_baseline(data, K, b_size=4000):
         locator,
         batched(idx, b_size),
     )
-    sset = [s for s, _ in sset]
-    sset = np.hstack(sset)
+    sset = (np.array(s) for s, _ in sset)
+    sset = np.hstack([*sset])
+    # sset = np.fromiter(iter(sset), dtype=int)
     return sset
-
-
-# @timeit
-# def craig_baseline(data, K, b_size=1024):
-#     features = data.astype(np.single)
-#     V = np.arange(len(features), dtype=int).reshape(-1, 1)
-#     start = 0
-#     end = start + b_size
-#     sset = []
-#     n_jobs = int(N_JOBS // 2)
-#     for ds in batched(features, b_size):
-#         ds = np.array(ds)
-#         D = pairwise_distances(ds, features, metric="euclidean", n_jobs=n_jobs)
-#         v = V[start:end]
-#         D = D.max() - D
-#         B = int(len(D) * (K / len(features)))
-#         locator = FacilityLocation(D=D, V=v)
-#         sset_idx, *_ = lazy_greedy_heap(F=locator, V=v, B=B)
-#         sset_idx = np.array(sset_idx, dtype=int).reshape(1, -1)[0]
-#         sset.append(sset_idx)
-#         start += b_size
-#         end += b_size
-#     sset = np.hstack(sset)
-#     return sset
 
 
 REDUCE = {"mean": np.mean, "sum": np.sum}
