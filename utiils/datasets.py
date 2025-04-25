@@ -190,3 +190,16 @@ def load_sgemm_dataset(config):
     dataset = dataset.drop(columns=["Run1 (ms)", "Run2 (ms)", "Run3 (ms)", "Run4 (ms)"])
     target = dataset.pop(config["target"])
     return dataset.values.astype(np.float64), target.values.astype(np.float64)
+
+
+@register
+def load_hepmass_dataset(config):
+    path = DATA_ROOT / Path(config["train"])
+    dataset = pd.read_csv(path, engine="pyarrow")
+    dataset["mass"] = (
+        OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)
+        .fit_transform(dataset[["mass"]])
+        .reshape(-1, 1)
+    )
+    target = dataset.pop(config["target"])
+    return dataset.values.astype(np.float32), target.values.astype(np.float32)

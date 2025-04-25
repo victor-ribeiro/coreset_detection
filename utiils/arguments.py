@@ -37,12 +37,7 @@ METHODS = Args(
 )
 DATASETS = Args(
     default="bike_share",
-    choices=[
-        "sgemm",
-        "covtype",
-        "adult",
-        "bike_share",
-    ],
+    choices=["sgemm", "covtype", "adult", "bike_share", "hepmass"],
 )
 
 

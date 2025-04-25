@@ -14,7 +14,14 @@ from sklearn.metrics import (
 from xgboost import XGBClassifier, XGBRegressor
 
 from utiils.arguments import get_args
-from utiils.datasets import *
+from utiils.datasets import (
+    load_config,
+    load_adult_dataset,
+    load_bike_share_dataset,
+    load_covtype_dataset,
+    load_hepmass_dataset,
+    load_sgemm_dataset,
+)
 from utiils.trainer import experiment, _parse_expperiment_name
 
 CONFIG = Path(".config")
@@ -29,6 +36,11 @@ if __name__ == "__main__":
     print(args.__dict__)
     spln_args = {}
     match args.dataset:
+        case "hepmass":
+            config = load_config(CONFIG["hepmass"])
+            dataset, target = load_hepmass_dataset(config)
+            metrics = [accuracy_score, precision_score]
+            print(f"Loaded {args.dataset} dataset with {dataset.shape[0]} samples.")
         case "sgemm":
             config = load_config(CONFIG["sgemm"])
             dataset, target = load_sgemm_dataset(config)
@@ -37,12 +49,12 @@ if __name__ == "__main__":
         case "covtype":
             config = load_config(CONFIG["covtype"])
             dataset, target = load_covtype_dataset(config)
-            metrics = [accuracy_score, f1_score, precision_score, recall_score]
+            metrics = [accuracy_score, precision_score]
             print(f"Loaded {args.dataset} dataset with {dataset.shape[0]} samples.")
         case "adult":
             config = load_config(CONFIG["adult"])
             dataset, target = load_adult_dataset(config)
-            metrics = [accuracy_score, f1_score, precision_score, recall_score]
+            metrics = [accuracy_score, precision_score]
             print(f"Loaded {args.dataset} dataset with {dataset.shape[0]} samples.")
         case "bike_share":
             config = load_config(CONFIG["bike_share"])
