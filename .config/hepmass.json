@@ -1,0 +1,5 @@
+{
+    "train": "hepmass/all_train.csv.gz",
+    "test": "hepmass/all_test.csv.gz",
+    "target": "# label"
+}
