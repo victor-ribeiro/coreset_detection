@@ -122,7 +122,7 @@ def freddy(
         base_inc = _base_inc(alpha)
         D = pairwise_distances(ds)
         D = D.max() - D  # * (entropy(dataset) - entropy(dataset[sset]))
-        size = len(D)
+        # size = len(D)
         localmax = np.amax(D, axis=1)
         argmax += localmax.sum()
         n = len(sset)
