@@ -26,14 +26,7 @@ MODELS = Args(
 )
 METHODS = Args(
     default="pmi_kmeans_sampler",
-    choices=[
-        "none",
-        "kmeans",
-        "pmi_kmeans",
-        "random",
-        "craig",
-        "freddy",
-    ],
+    choices=["none", "kmeans", "pmi_kmeans", "random", "craig", "freddy", "gradmatch"],
 )
 DATASETS = Args(
     default="bike_share",

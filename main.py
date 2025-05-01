@@ -123,6 +123,11 @@ if __name__ == "__main__":
                 "batch_size": args.batch_size,
             }
             sampler = freddy
+        case "gradmatch":
+            from sampling import gradmatch
+
+            spln_args = {"tol": args.tol, "batch_size": args.batch_size}
+            sampler = gradmatch
         case _:
             raise ValueError(f"Unknown sampling method: {args.method}")
 

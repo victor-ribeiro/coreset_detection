@@ -24,18 +24,25 @@ def experiment(
     """
     sampler_name = sampler.__name__ if sampler else None
     print(
-        f"[{sampler_name} ]Running experiment with {learner.__name__} on {features.shape[0]} samples"
+        f"[{sampler_name}]Running experiment with {learner.__name__} on {features.shape[0]} samples"
     )
 
     eval_metrics = []
     for sample in range(resample * runs):
-        if sample % resample == 0:
-            train_feat, test_feat, train_target, test_target = train_test_split(
-                features, target, test_size=0.2
-            )
-            val_feat, test_feat, val_target, test_target = train_test_split(
-                test_feat, test_target, test_size=0.5
-            )
+        # if sample % resample == 0:
+        #     train_feat, test_feat, train_target, test_target = train_test_split(
+        #         features, target, test_size=0.2
+        #     )
+        #     val_feat, test_feat, val_target, test_target = train_test_split(
+        #         test_feat, test_target, test_size=0.5
+        #     )
+
+        train_feat, test_feat, train_target, test_target = train_test_split(
+            features, target, test_size=0.2
+        )
+        val_feat, test_feat, val_target, test_target = train_test_split(
+            test_feat, test_target, test_size=0.5
+        )
         # for run in range(runs):
         run = sample % resample
         print(f"Run {(sample) + 1}/{runs*resample} ")

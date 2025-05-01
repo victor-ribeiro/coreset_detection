@@ -20,3 +20,4 @@ dependencies:
   - torchdata
   - pyarrow
   - nearpy
+  - ahocorasick
