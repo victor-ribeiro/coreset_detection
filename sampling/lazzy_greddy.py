@@ -90,10 +90,10 @@ def entropy(x):
 #     f_norm = alpha / (sset.sum() + acc + 1)
 #     util = norm * math.log(1 + (argmax.sum()) * f_norm)
 #     return util
-def utility_score(e, sset, /, acc=0, alpha=0.1, beta=1.1):
+def utility_score(e, sset, /, alpha=0.1, beta=1.1):
     norm = 1 / _base_inc(alpha)
     argmax = np.maximum(e, sset)
-    f_norm = alpha / (sset.sum(axis=0) + acc + 1)
+    f_norm = alpha / (sset.sum(axis=0) + 1)
     util = norm * np.log(1 + (argmax.sum(axis=0)) * f_norm)
     return util
 
@@ -118,7 +118,6 @@ def freddy(
     vals = []
     _ = [q.push(base_inc, (V, V % batch_size)) for V in range(len(dataset))]
     h_ = entropy(dataset)
-    argmax = 0
     for ds, V in zip(
         batched(dataset, batch_size),
         batched(idx, batch_size),
@@ -127,14 +126,11 @@ def freddy(
         D = pairwise_distances(ds)
         D = D.max() - D * (h_ - entropy(dataset[sset]))
         localmax = np.amax(D, axis=1)
-        # argmax += localmax.sum()
-        score_s = utility_score(D, localmax, acc=argmax, alpha=alpha, beta=beta)
+        score_s = utility_score(D, localmax, alpha=alpha, beta=beta)
         while q and len(sset) < K:
 
             score, idx_s = q.head
             inc = score_s - score
-            # s = D[idx_s[1]]
-            # score_s = utility_score(s, localmax, acc=argmax, alpha=alpha, beta=beta)
             if np.all(inc < 0) or (not q):
                 # break
                 continue
