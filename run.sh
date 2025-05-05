@@ -6,7 +6,7 @@
 dataset=covtype
 model=XGBClassifier
 
-for frac in .1 .2 .3 .4 .5 .6;
+for frac in .1 .2 .3 .4 ;
 do
     # for method in pmi_kmeans freddy random craig;
     for method in freddy;
