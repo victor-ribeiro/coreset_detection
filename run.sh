@@ -3,7 +3,7 @@
 # dataset=bike_share
 # model=XGBRegressor
 
-dataset=covtype
+dataset=adult
 model=XGBClassifier
 
 for frac in .1 .2 .3 .4 ;
