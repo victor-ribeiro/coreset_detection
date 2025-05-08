@@ -1,5 +1,11 @@
 from pathlib import Path
-from sklearn.preprocessing import OrdinalEncoder, minmax_scale
+from sklearn.preprocessing import (
+    OrdinalEncoder,
+    minmax_scale,
+    normalize,
+    LabelBinarizer,
+    StandardScaler,
+)
 
 import numpy as np
 import pandas as pd
@@ -157,7 +163,9 @@ def load_covtype_dataset(config):
     dataset = pd.read_csv(path, engine="pyarrow", names=names)
     dataset[config["target"]] -= 1
     target = dataset.pop(config["target"])
-    return dataset.values, target.values
+    return StandardScaler().fit_transform(dataset), LabelBinarizer().fit_transform(
+        target
+    )
 
 
 @register
@@ -189,7 +197,12 @@ def load_sgemm_dataset(config):
     ].mean(axis=1)
     dataset = dataset.drop(columns=["Run1 (ms)", "Run2 (ms)", "Run3 (ms)", "Run4 (ms)"])
     target = dataset.pop(config["target"])
-    return dataset.values.astype(np.float64), target.values.astype(np.float64)
+    dataset = normalize(
+        dataset,
+        axis=0,
+        norm="max",
+    )
+    return dataset.astype(np.float64), target.values.astype(np.float64)
 
 
 @register

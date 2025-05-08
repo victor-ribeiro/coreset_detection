@@ -112,7 +112,7 @@ def freddy(
     # basic config
     base_inc = _base_inc(alpha)
     idx = np.arange(len(dataset))
-    dataset = dataset[idx]
+    # dataset = dataset[idx]
     q = Queue()
     sset = []
     vals = []
@@ -139,7 +139,7 @@ def freddy(
                 vals.append(score_s[idx_s[1]])
                 sset.append(idx_s[0])
             else:
-                q.push(inc, idx_s)
+                q.push(inc[idx_s[1]], idx_s)
             q.push(score_t, idx_t)
         else:
             break

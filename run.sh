@@ -1,9 +1,9 @@
 # !/bin/bash
 
-# dataset=bike_share
+# dataset=sgemm
 # model=XGBRegressor
 
-dataset=adult
+dataset=covtype
 model=XGBClassifier
 
 for frac in .1 .2 .3 .4 ;
