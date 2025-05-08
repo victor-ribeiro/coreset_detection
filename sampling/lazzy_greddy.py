@@ -84,17 +84,11 @@ def entropy(x):
     return -(p * np.log2(p)).sum()
 
 
-# def utility_score(e, sset, /, acc=0, alpha=0.1, beta=1.1):
-#     norm = 1 / _base_inc(alpha)
-#     argmax = np.maximum(e, sset)
-#     f_norm = alpha / (sset.sum() + acc + 1)
-#     util = norm * math.log(1 + (argmax.sum()) * f_norm)
-#     return util
-def utility_score(e, sset, /, alpha=0.1, beta=1.1):
+def utility_score(e, sset, /, acc=0, alpha=0.1, beta=1.1):
     norm = 1 / _base_inc(alpha)
     argmax = np.maximum(e, sset)
-    f_norm = alpha / (sset.sum(axis=0) + 1)
-    util = norm * np.log(1 + (argmax.sum(axis=0)) * f_norm)
+    f_norm = alpha / (sset.sum() + acc + 1)
+    util = norm * math.log(1 + (argmax.sum()) * f_norm)
     return util
 
 
@@ -112,12 +106,13 @@ def freddy(
     # basic config
     base_inc = _base_inc(alpha)
     idx = np.arange(len(dataset))
-    # dataset = dataset[idx]
+    dataset = dataset[idx]
     q = Queue()
     sset = []
     vals = []
     _ = [q.push(base_inc, (V, V % batch_size)) for V in range(len(dataset))]
     h_ = entropy(dataset)
+    argmax = 0
     for ds, V in zip(
         batched(dataset, batch_size),
         batched(idx, batch_size),
@@ -126,20 +121,23 @@ def freddy(
         D = pairwise_distances(ds)
         D = D.max() - D * (h_ - entropy(dataset[sset]))
         localmax = np.amax(D, axis=1)
-        score_s = utility_score(D, localmax, alpha=alpha, beta=beta)
-        while q and len(sset) < K:
+        argmax += localmax.sum()
+        n = len(sset)
 
+        while q and len(sset) < K:
             score, idx_s = q.head
+            s = D[idx_s[1]]
+            score_s = utility_score(s, localmax, acc=argmax, alpha=alpha, beta=beta)
             inc = score_s - score
-            if np.all(inc < 0) or (not q):
+            if (inc < 0) or (not q):
                 # break
                 continue
             score_t, idx_t = q.head
-            if inc[idx_s[1]] > score_t:
-                vals.append(score_s[idx_s[1]])
+            if inc > score_t:
+                vals.append(score_s)
                 sset.append(idx_s[0])
             else:
-                q.push(inc[idx_s[1]], idx_s)
+                q.push(inc, idx_s)
             q.push(score_t, idx_t)
         else:
             break
