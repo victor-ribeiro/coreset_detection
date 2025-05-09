@@ -163,9 +163,7 @@ def load_covtype_dataset(config):
     dataset = pd.read_csv(path, engine="pyarrow", names=names)
     dataset[config["target"]] -= 1
     target = dataset.pop(config["target"])
-    return StandardScaler().fit_transform(dataset), LabelBinarizer().fit_transform(
-        target
-    )
+    return dataset.values, LabelBinarizer().fit_transform(target.values)
 
 
 @register
@@ -192,17 +190,18 @@ def load_sgemm_dataset(config):
         "Run4 (ms)",
     ]
     dataset = pd.read_csv(path, engine="pyarrow", index_col=0, skiprows=1, names=names)
-    dataset[config["target"]] = dataset[
-        ["Run1 (ms)", "Run2 (ms)", "Run3 (ms)", "Run4 (ms)"]
-    ].mean(axis=1)
+    # dataset[config["target"]] = dataset[
+    #     ["Run1 (ms)", "Run2 (ms)", "Run3 (ms)", "Run4 (ms)"]
+    # ].mean(axis=1)
+    target = dataset.loc[:, ["Run1 (ms)", "Run2 (ms)", "Run3 (ms)", "Run4 (ms)"]]
     dataset = dataset.drop(columns=["Run1 (ms)", "Run2 (ms)", "Run3 (ms)", "Run4 (ms)"])
-    target = dataset.pop(config["target"])
-    dataset = normalize(
-        dataset,
-        axis=0,
-        norm="max",
-    )
-    return dataset.astype(np.float64), target.values.astype(np.float64)
+    # target = dataset.pop(config["target"])
+    # dataset = normalize(
+    #     dataset,
+    #     axis=0,
+    #     norm="max",
+    # )
+    return dataset.values.astype(np.float64), target.values.astype(np.float64)
 
 
 @register
