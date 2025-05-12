@@ -84,17 +84,11 @@ def entropy(x):
     return -(p * np.log2(p)).sum()
 
 
-# def utility_score(e, sset, /, acc=0, alpha=0.1, beta=1.1):
-#     norm = 1 / _base_inc(alpha)
-#     argmax = np.maximum(e, sset)
-#     f_norm = alpha / (sset.sum() + acc + 1)
-#     util = norm * math.log(1 + (argmax.sum()) * f_norm)
-#     return util
-def utility_score(e, sset, /, alpha=0.1, beta=1.1, acc=0):
+def utility_score(e, sset, /, acc=0, alpha=0.1, beta=1.1):
     norm = 1 / _base_inc(alpha)
     argmax = np.maximum(e, sset)
-    f_norm = alpha / (sset.sum(axis=0) + 1)
-    util = norm * np.log(1 + (argmax.sum(axis=0) + acc) * f_norm)
+    f_norm = alpha / (sset.sum() + acc + 1)
+    util = norm * math.log(1 + (argmax.sum()) * f_norm)
     return util
 
 
@@ -112,39 +106,42 @@ def freddy(
     # basic config
     base_inc = _base_inc(alpha)
     idx = np.arange(len(dataset))
-    # dataset = dataset[idx]
+    idx = np.random.permutation(idx)
+    dataset = dataset[idx]
     q = Queue()
     sset = []
     vals = []
-    acc = 0
+    argmax = 0
     _ = [q.push(base_inc, (V, V % batch_size)) for V in range(len(dataset))]
-    for ds, V in zip(
-        batched(dataset, batch_size),
-        batched(idx, batch_size),
-    ):
+    h_ = entropy(dataset)
+    for ds in batched(dataset, batch_size):
         ds = np.array(ds)
-        h_ = entropy(ds)
+        base_inc = _base_inc(alpha)
         D = pairwise_distances(ds)
-        D = D.max() - D * (h_ - entropy(dataset[sset]))
+        D = D.max() - D  # * (entropy(dataset) - entropy(dataset[sset]))
+        # size = len(D)
         localmax = np.amax(D, axis=1)
-        score_s = utility_score(D, localmax, alpha=alpha, beta=beta, acc=acc)
-        acc += D.max(axis=0).sum()
-        while q and len(sset) < K:
+        argmax += localmax.sum()
+        n = len(sset)
+        _sset = []
 
+        while q and len(sset) < K:
             score, idx_s = q.head
+            s = D[idx_s[1]]
+            score_s = utility_score(s, localmax, acc=argmax, alpha=alpha, beta=beta)
+            score_s *= h_ - entropy(ds[idx_s[1]]) + entropy(ds[_sset])
             inc = score_s - score
-            if np.all(inc < 0) or (not q):
+            if (inc < 0) or (not q):
                 # break
                 continue
             score_t, idx_t = q.head
-            if inc[idx_s[1]] > score_t:
-                vals.append(score_s[idx_s[1]])
+            if inc > score_t:
+                _sset.append(idx_s[1])
+                vals.append(score_s)
                 sset.append(idx_s[0])
             else:
-                q.push(inc[idx_s[1]], idx_s)
+                q.push(inc, idx_s)
             q.push(score_t, idx_t)
-        else:
-            break
 
     np.random.shuffle(sset)
     if return_vals:
