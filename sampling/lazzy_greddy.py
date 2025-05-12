@@ -117,12 +117,12 @@ def freddy(
     sset = []
     vals = []
     _ = [q.push(base_inc, (V, V % batch_size)) for V in range(len(dataset))]
-    h_ = entropy(dataset)
     for ds, V in zip(
         batched(dataset, batch_size),
         batched(idx, batch_size),
     ):
         ds = np.array(ds)
+        h_ = entropy(ds)
         D = pairwise_distances(ds)
         D = D.max() - D * (h_ - entropy(dataset[sset]))
         localmax = np.amax(D, axis=1)

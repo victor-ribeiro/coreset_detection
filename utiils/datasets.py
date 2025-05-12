@@ -215,4 +215,4 @@ def load_hepmass_dataset(config):
     #     .reshape(-1, 1)
     # )
     target = dataset.pop(config["target"])
-    return dataset.values.astype(np.float32), target.values.astype(np.float32)
+    return dataset.values, target.values
