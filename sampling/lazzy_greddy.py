@@ -105,12 +105,13 @@ def freddy(
 ):
     # basic config
     base_inc = _base_inc(alpha)
-    idx = np.arange(len(dataset))
-    q = Queue()
+    # idx = np.arange(len(dataset))
+    # q = Queue()
     sset = []
     vals = []
     argmax = 0
-    _ = [q.push(base_inc, (V, V % batch_size)) for V in range(len(dataset))]
+    q = Queue((base_inc, (V, V % batch_size)) for V in range(len(dataset)))
+    # _ = [q.push(base_inc, (V, V % batch_size)) for V in range(len(dataset))]
     h_ = entropy(dataset)
     for ds in batched(dataset, batch_size):
         ds = np.array(ds)
