@@ -90,11 +90,11 @@ def entropy(x):
 #     f_norm = alpha / (sset.sum() + acc + 1)
 #     util = norm * math.log(1 + (argmax.sum()) * f_norm)
 #     return util
-def utility_score(e, sset, /, alpha=0.1, beta=1.1):
+def utility_score(e, sset, /, alpha=0.1, beta=1.1, acc=0):
     norm = 1 / _base_inc(alpha)
     argmax = np.maximum(e, sset)
     f_norm = alpha / (sset.sum(axis=0) + 1)
-    util = norm * np.log(1 + (argmax.sum(axis=0)) * f_norm)
+    util = norm * np.log(1 + (argmax.sum(axis=0) + acc) * f_norm)
     return util
 
 
@@ -116,6 +116,7 @@ def freddy(
     q = Queue()
     sset = []
     vals = []
+    acc = 0
     _ = [q.push(base_inc, (V, V % batch_size)) for V in range(len(dataset))]
     for ds, V in zip(
         batched(dataset, batch_size),
@@ -126,7 +127,8 @@ def freddy(
         D = pairwise_distances(ds)
         D = D.max() - D * (h_ - entropy(dataset[sset]))
         localmax = np.amax(D, axis=1)
-        score_s = utility_score(D, localmax, alpha=alpha, beta=beta)
+        score_s = utility_score(D, localmax, alpha=alpha, beta=beta, acc=acc)
+        acc += D.max(axis=0).sum()
         while q and len(sset) < K:
 
             score, idx_s = q.head
