@@ -163,7 +163,7 @@ def load_covtype_dataset(config):
     dataset = pd.read_csv(path, engine="pyarrow", names=names)
     dataset[config["target"]] -= 1
     target = dataset.pop(config["target"])
-    return dataset.values, LabelBinarizer().fit_transform(target.values)
+    return dataset.values, target.values
 
 
 @register

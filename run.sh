@@ -11,7 +11,7 @@ do
     # for method in freddy gradmatch random;
     for method in freddy random gradmatch;
     do 
-        python main.py --dataset $dataset --method $method  --model $model --run 10 --tol .001 --resample 5 --train_frac $frac --batch_size 500 --alpha 1
+        python main.py --dataset $dataset --method $method  --model $model --run 10 --tol .001 --resample 5 --train_frac $frac --batch_size 500 --alpha .5
     done
 done
 
