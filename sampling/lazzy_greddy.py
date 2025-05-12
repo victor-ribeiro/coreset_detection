@@ -87,7 +87,7 @@ def entropy(x):
 def utility_score(e, sset, /, acc=0, alpha=0.1, beta=1.1):
     norm = 1 / _base_inc(alpha)
     argmax = np.maximum(e, sset)
-    f_norm = alpha / (sset.sum() + acc + 1)
+    f_norm = alpha / (sset.sum() + 1)
     util = norm * math.log(1 + (argmax.sum()) * f_norm)
     return util
 
@@ -110,39 +110,35 @@ def freddy(
     sset = []
     vals = []
     argmax = 0
-    q = Queue((base_inc, (V, V % batch_size)) for V in range(len(dataset)))
+    q = Queue((base_inc, V) for V in range(len(dataset)))
     # _ = [q.push(base_inc, (V, V % batch_size)) for V in range(len(dataset))]
     h_ = entropy(dataset)
-    for ds in batched(dataset, batch_size):
-        ds = np.array(ds)
-        base_inc = _base_inc(alpha)
-        # D = pairwise_distances(ds, metric="l1")
-        D = pairwise_distances(ds)
-        D = D.max() - D  # * (entropy(dataset) - entropy(dataset[sset]))
-        # size = len(D)
-        localmax = np.amax(D, axis=1)
-        argmax += localmax.sum()
-        n = len(sset)
-        _sset = []
+    while q and len(sset) < K:
+        for ds in batched(dataset, batch_size):
+            ds = np.array(ds)
+            base_inc = _base_inc(alpha)
+            # D = pairwise_distances(ds, metric="l1")
+            D = pairwise_distances(ds)
+            D = D.max() - D * (h_ - entropy(dataset[sset]))
+            localmax = np.amax(D, axis=1)
+            argmax += localmax.sum()
 
-        while q and len(sset) < K:
             score, idx_s = q.head
-            s = D[idx_s[1]]
+            s = D[idx_s % len(ds)]
             score_s = utility_score(s, localmax, acc=argmax, alpha=alpha, beta=beta)
-            score_s *= h_ - entropy(dataset[sset + [idx_s[1]]])
-
             inc = score_s - score
-            if (inc < 0) or (not q):
+            if inc < 0:  # or (not q):
                 # break
                 continue
             score_t, idx_t = q.head
             if inc > score_t:
-                _sset.append(idx_s[1])
                 vals.append(score_s)
-                sset.append(idx_s[0])
+                sset.append(idx_s)
             else:
                 q.push(inc, idx_s)
             q.push(score_t, idx_t)
+        # else:
+        #     break
 
     np.random.shuffle(sset)
     if return_vals:

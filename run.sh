@@ -6,7 +6,8 @@
 dataset=covtype
 model=XGBClassifier
 
-for frac in .01 .02 .03 .04 .05 .1 .2 .3 .4 .5;
+# for frac in .01 .02 .03 .04 .05 .1 .2 .3 .4 .5;
+for frac in .01 .02 .03 .04 .05 ;
 do
     # for method in freddy gradmatch random;
     for method in freddy;
