@@ -113,23 +113,24 @@ def freddy(
     q = Queue((base_inc, V) for V in range(len(dataset)))
     # _ = [q.push(base_inc, (V, V % batch_size)) for V in range(len(dataset))]
     h_ = entropy(dataset)
-    while q and len(sset) < K:
-        for ds in batched(dataset, batch_size):
-            ds = np.array(ds)
-            base_inc = _base_inc(alpha)
-            # D = pairwise_distances(ds, metric="l1")
-            D = pairwise_distances(ds)
-            D = D.max() - D * (h_ - entropy(dataset[sset]))
-            localmax = np.amax(D, axis=1)
-            argmax += localmax.sum()
-
+    for ds in batched(dataset, batch_size):
+        ds = np.array(ds)
+        base_inc = _base_inc(alpha)
+        # D = pairwise_distances(ds, metric="l1")
+        D = pairwise_distances(ds)
+        D = D.max() - D * (h_ - entropy(dataset[sset]))
+        localmax = np.amax(D, axis=1)
+        argmax += localmax.sum()
+        if not q:
+            break
+        while len(sset) < K:
             score, idx_s = q.head
             s = D[idx_s % len(ds)]
             score_s = utility_score(s, localmax, acc=argmax, alpha=alpha, beta=beta)
             inc = score_s - score
             if inc < 0:  # or (not q):
-                # break
-                continue
+                break
+                # continue
             score_t, idx_t = q.head
             if inc > score_t:
                 vals.append(score_s)
@@ -137,8 +138,6 @@ def freddy(
             else:
                 q.push(inc, idx_s)
             q.push(score_t, idx_t)
-        # else:
-        #     break
 
     np.random.shuffle(sset)
     if return_vals:
