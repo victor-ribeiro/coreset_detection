@@ -4,15 +4,14 @@
 # model=XGBRegressor
 
 dataset=covtype
-model=XGBClassifier
+ model=XGBClassifier
 
-# for frac in .01 .02 .03 .04 .05 .1 .2 .3 .4 .5;
-for frac in .01 .02 .03 .04 .05 ;
+for frac in .1 .2 .3 .4;
 do
-    # for method in freddy gradmatch random;
     for method in freddy;
+    # for method in gradmatch random;
     do 
-        python main.py --dataset $dataset --method $method  --model $model --run 6 --tol .001 --resample 5 --train_frac $frac --batch_size 500 --alpha .5
+        python main.py --dataset $dataset --method $method  --model $model --run 6 --tol .001 --resample 5 --train_frac $frac --batch_size 500 --alpha 1
     done
 done
 

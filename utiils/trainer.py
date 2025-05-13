@@ -1,6 +1,8 @@
 from sklearn.model_selection import train_test_split
 from time import time, perf_counter
 
+import asyncio
+
 
 def _parse_expperiment_name(args):
     out_name = [f"_{k}_{v}_" for k, v in args.__dict__.items()]
@@ -125,3 +127,8 @@ def experiment(
                     )
             del model
     return eval_metrics
+
+
+# async def generate_subsets(features, frac, runs, sampler, **sampling_args):
+#     async for r in async range(runs):
+#         pass
