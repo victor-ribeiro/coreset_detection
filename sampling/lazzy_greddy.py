@@ -189,7 +189,7 @@ def freddy(
         max_vec = eigenvectors[max_val]
         max_vec = np.abs(max_vec)
         # omega = D * max_vec
-        omega = D * max_vec * (entropy(dataset[sset]) - entropy(ds))
+        omega = D * max_vec * (entropy(ds) - entropy(dataset[sset]))
 
         score_s = utility_score(omega, D, acc=argmax, alpha=alpha, beta=beta)
         while len(sset) < K:
