@@ -1,12 +1,12 @@
 # !/bin/bash
 
-dataset=storage_perf
-model=XGBRegressor
+# dataset=storage_perf
+# model=XGBRegressor
 
-# dataset=covtype
-# model=XGBClassifier
+dataset=covtype
+model=XGBClassifier
 
-for frac in .1 .2 .3 .4;
+for frac in .01 .02 .03 .04 .05 .1 .2 .3 .4 .5;
 do
     for method in freddy;
     # for method in gradmatch random;
