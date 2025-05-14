@@ -1,10 +1,10 @@
 # !/bin/bash
 
-# dataset=sgemm
-# model=XGBRegressor
+dataset=storage_perf
+model=XGBRegressor
 
-dataset=covtype
- model=XGBClassifier
+# dataset=covtype
+# model=XGBClassifier
 
 for frac in .1 .2 .3 .4;
 do

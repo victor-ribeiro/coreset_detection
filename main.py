@@ -16,14 +16,7 @@ from sklearn.metrics import (
 from xgboost import XGBClassifier, XGBRegressor
 
 from utiils.arguments import get_args
-from utiils.datasets import (
-    load_config,
-    load_adult_dataset,
-    load_bike_share_dataset,
-    load_covtype_dataset,
-    load_hepmass_dataset,
-    load_sgemm_dataset,
-)
+from utiils.datasets import *
 from utiils.trainer import experiment, _parse_expperiment_name
 
 CONFIG = Path(".config")
@@ -38,6 +31,21 @@ if __name__ == "__main__":
     print(args.__dict__)
     spln_args = {}
     match args.dataset:
+        case "higgs":
+            config = load_config(CONFIG["higgs"])
+            dataset, target = load_higgs_dataset(config)
+            metrics = [accuracy_score, precision_score]
+            print(f"Loaded {args.dataset} dataset with {dataset.shape[0]} samples.")
+        case "storage_perf":
+            config = load_config(CONFIG["storage_perf"])
+            dataset, target = load_storage_dataset(config)
+            metrics = [root_mean_squared_error]
+            print(f"Loaded {args.dataset} dataset with {dataset.shape[0]} samples.")
+        case "predictmds":
+            config = load_config(CONFIG["predictmds"])
+            dataset, target = load_predictmds_dataset(config)
+            metrics = [root_mean_squared_error]
+            print(f"Loaded {args.dataset} dataset with {dataset.shape[0]} samples.")
         case "hepmass":
             config = load_config(CONFIG["hepmass"])
             dataset, target = load_hepmass_dataset(config)

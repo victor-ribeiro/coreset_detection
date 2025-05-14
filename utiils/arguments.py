@@ -30,7 +30,16 @@ METHODS = Args(
 )
 DATASETS = Args(
     default="bike_share",
-    choices=["sgemm", "covtype", "adult", "bike_share", "hepmass"],
+    choices=[
+        "sgemm",
+        "covtype",
+        "adult",
+        "bike_share",
+        "hepmass",
+        "predictmds",
+        "storage_perf",
+        "higgs",
+    ],
 )
 
 

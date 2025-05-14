@@ -1,0 +1,4 @@
+{
+    "root": "predictmds/YearPredictionMSD.txt",
+    "target": "year"
+}

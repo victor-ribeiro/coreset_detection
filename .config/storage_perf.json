@@ -1,0 +1,7 @@
+{
+    "root": "storage_perf",
+    "target": [
+        "iops", 
+        "lat"
+    ]
+}

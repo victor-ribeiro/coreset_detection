@@ -216,3 +216,71 @@ def load_hepmass_dataset(config):
     # )
     target = dataset.pop(config["target"])
     return dataset.values, target.values
+
+
+@register
+def load_predictmds_dataset(config):
+
+    path = DATA_ROOT / Path(config["root"])
+    names = ["year"]
+    names += [f"timbre_avg{i}" for i in range(12)]
+    names += [f"timbre_cov{i}" for i in range(78)]
+    dataset = pd.read_csv(path, names=names, engine="pyarrow")
+    target = dataset.pop(config["target"])
+    return dataset.values, target.values
+
+
+@register
+def load_storage_dataset(config):
+    path = DATA_ROOT / Path(config["root"])
+    dataset = map(pd.read_csv, path.rglob("*.csv"))
+    dataset = pd.concat(dataset)
+    dataset = pd.get_dummies(
+        dataset,
+        columns=["load_type", "io_type", "raid", "device_type"],
+        drop_first=False,
+        dtype=int,
+    )
+
+    target = dataset[config["target"]]
+    dataset.drop(["id", *config["target"]], axis="columns", inplace=True)
+    return dataset.values, target.values
+
+
+@register
+def load_higgs_dataset(config):
+    path = DATA_ROOT / Path(config["root"])
+    names = [
+        config["target"],
+        "lepton pT",
+        "lepton eta",
+        "lepton phi",
+        "missing energy magnitude",
+        "missing energy phi",
+        "jet 1 pt",
+        "jet 1 eta",
+        "jet 1 phi",
+        "jet 1 b-tag",
+        "jet 2 pt",
+        "jet 2 eta",
+        "jet 2 phi",
+        "jet 2 b-tag",
+        "jet 3 pt",
+        "jet 3 eta",
+        "jet 3 phi",
+        "jet 3 b-tag",
+        "jet 4 pt",
+        "jet 4 eta",
+        "jet 4 phi",
+        "jet 4 b-tag",
+        "m_jj",
+        "m_jjj",
+        "m_lv",
+        "m_jlv",
+        "m_bb",
+        "m_wbb",
+        "m_wwbb",
+    ]
+    dataset = pd.read_csv(path, names=names, engine="pyarrow")
+    target = dataset.pop(config["target"])
+    return dataset.values, target.values

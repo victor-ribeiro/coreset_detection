@@ -1,0 +1,4 @@
+{
+    "root": "higgs/HIGGS.csv.gz",
+    "target": "label"
+}
