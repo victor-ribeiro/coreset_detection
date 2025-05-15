@@ -31,20 +31,9 @@ def experiment(
 
     eval_metrics = []
     for sample in range(resample * runs):
-        if sample % resample == 0:
-            train_feat, test_feat, train_target, test_target = train_test_split(
-                features, target, test_size=0.2
-            )
-            val_feat, test_feat, val_target, test_target = train_test_split(
-                test_feat, test_target, test_size=0.5
-            )
-
-        # train_feat, test_feat, train_target, test_target = train_test_split(
-        #     features, target, test_size=0.2
-        # )
-        # val_feat, test_feat, val_target, test_target = train_test_split(
-        #     test_feat, test_target, test_size=0.5
-        # )
+        train_feat, test_feat, train_target, test_target = train_test_split(
+            features, target, test_size=0.2
+        )
         # for run in range(runs):
         run = sample % resample
         print(f"Run {(sample) + 1}/{runs*resample} ")
@@ -56,7 +45,6 @@ def experiment(
             end_time = perf_counter()
             print(f"Training time: {end_time - init_train:.2f} seconds")
             test_pred = model.predict(test_feat)
-            val_pred = model.predict(val_feat)
             for metric in metrics:
                 try:
                     eval_metrics.append(
@@ -64,9 +52,8 @@ def experiment(
                             "model": learner.__name__,
                             "method": sampler_name,
                             "metric": metric.__name__,
-                            "frac": 1,
+                            "frac": None,
                             "test": metric(test_target, test_pred),
-                            "val": metric(val_target, val_pred),
                             "train_time": end_time - init_train,
                             "selection_time": 0,
                         }
@@ -77,15 +64,14 @@ def experiment(
                             "model": learner.__name__,
                             "method": sampler_name,
                             "metric": metric.__name__,
-                            "frac": frac,
+                            "frac": None,
                             "test": metric(test_target, test_pred, average="macro"),
-                            "val": metric(val_target, val_pred, average="macro"),
                             "train_time": end_time - init_train,
                             "selection_time": 0,
                         }
                     )
         else:
-            k = int(len(train_feat) * frac)
+            k = int(len(train_feat) * frac) if frac < 1 else int(frac)
             print(f"Selecting {k/len(train_feat) * 100:.2f}% samples")
             t_, sset = sampler(train_feat, K=k, **sampling_args)
             print(
@@ -97,7 +83,6 @@ def experiment(
             end_time = perf_counter()
             print(f"Training time: {end_time - init_train:.2f} seconds")
             test_pred = model.predict(test_feat)
-            val_pred = model.predict(val_feat)
             for metric in metrics:
                 try:
                     eval_metrics.append(
@@ -107,7 +92,6 @@ def experiment(
                             "metric": metric.__name__,
                             "frac": frac,
                             "test": metric(test_target, test_pred),
-                            "val": metric(val_target, val_pred),
                             "train_time": end_time - init_train,
                             "selection_time": t_,
                         }
@@ -120,7 +104,6 @@ def experiment(
                             "metric": metric.__name__,
                             "frac": frac,
                             "test": metric(test_target, test_pred, average="macro"),
-                            "val": metric(val_target, val_pred, average="macro"),
                             "train_time": end_time - init_train,
                             "selection_time": t_,
                         }
