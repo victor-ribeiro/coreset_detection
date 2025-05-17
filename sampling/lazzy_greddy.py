@@ -124,14 +124,14 @@ def entropy(x):
 #         argmax += localmax.sum()
 #         n = len(sset)
 
-#         while q and len(sset) < K:
+#         while len(sset) < K:
 #             score, idx_s = q.head
 #             s = D[idx_s[1]]
 #             score_s = utility_score(s, localmax, acc=argmax, alpha=alpha, beta=beta)
 #             inc = score_s - score
 #             if (inc < 0) or (not q):
-#                 # break
-#                 continue
+#                 break
+#                 # continue
 #             score_t, idx_t = q.head
 #             if inc > score_t:
 #                 vals.append(score_s)
@@ -142,15 +142,17 @@ def entropy(x):
 #         else:
 #             break
 
-
 #     np.random.shuffle(sset)
 #     if return_vals:
 #         return np.array(vals), sset
 #     return np.array(sset)
+
+
 def utility_score(e, sset, /, acc=0, alpha=0.1, beta=1.1):
     norm = 1 / _base_inc(alpha)
-    f_norm = (sset.sum(axis=1) / alpha) + 1
-    util = norm * np.log(1 + (e.sum() * f_norm))
+    # norm = 1 / alpha
+    f_norm = sset / np.linalg.norm(sset)
+    util = norm * np.log(np.abs(e.sum(axis=1)) * f_norm)
     return util
 
 
@@ -180,6 +182,7 @@ def freddy(
         batched(idx, batch_size),
     ):
         ds = np.array(ds)
+        V = np.array(V)
         D = pairwise_distances(ds)
         D = D.max() - D
         localmax = np.amax(D, axis=1)
@@ -187,26 +190,33 @@ def freddy(
         eigenvalues, eigenvectors = np.linalg.eigh(D)
         max_val = np.argmax(eigenvalues)
         max_vec = eigenvectors[max_val]
-        max_vec = np.abs(max_vec)
-        # omega = D * max_vec
-        omega = D @ max_vec  # * (entropy(ds) - entropy(dataset[sset]))
+        max_vec = np.exp(np.abs(max_vec))
+        max_vec /= max_vec.sum()
+        # max_vec[max_vec > 0.5] = 1
+        # max_vec[max_vec <= 0.5] = 0
+        # max_vec = np.abs(max_vec)
+        D += D @ max_vec
 
-        score_s = utility_score(omega, D, acc=argmax, alpha=alpha, beta=beta)
-        while len(sset) < K:
-            score, idx_s = q.head
-            inc = score_s - score
-            if np.all(inc < 0) or (not q):
+        score_s = (
+            utility_score(D, localmax, acc=argmax, alpha=alpha, beta=beta)
+            * (h_ - entropy(ds))
+            / h_
+        )
+        score, idx_s = q.head
+        inc = score_s - score
+        if np.all(inc < 0) or (not q):
+            continue
+        score_t, idx_t = q.head
+        if any(inc > score_t):
+            sset.extend(V[inc > score_t])
+            if len(sset) >= K:
+                sset = sset[:K]
                 break
-                # continue
-            score_t, idx_t = q.head
-            if inc[idx_s[1]] > score_t:
-                vals.append(score_s[idx_s[1]])
-                sset.append(idx_s[0])
-            else:
-                q.push(inc[idx_s[1]], idx_s)
-            q.push(score_t, idx_t)
         else:
-            break
+
+            for i, v in enumerate(V[inc < score_t]):
+                q.push(inc[i], v)
+        q.push(score_t, idx_t)
 
     np.random.shuffle(sset)
     if return_vals:
