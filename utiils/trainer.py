@@ -29,12 +29,15 @@ def experiment(
         f"[{sampler_name}]Running experiment with {learner.__name__} on {features.shape[0]} samples"
     )
 
+    # train_feat, test_feat, train_target, test_target = train_test_split(
+    #     features, target, test_size=0.2
+    # )
     eval_metrics = []
     for sample in range(resample * runs):
-        train_feat, test_feat, train_target, test_target = train_test_split(
-            features, target, test_size=0.2
-        )
-        # for run in range(runs):
+        if sample % resample == 0:
+            train_feat, test_feat, train_target, test_target = train_test_split(
+                features, target, test_size=0.2
+            )
         run = sample % resample
         print(f"Run {(sample) + 1}/{runs*resample} ")
         model = learner(**model_args) if model_args else learner()
