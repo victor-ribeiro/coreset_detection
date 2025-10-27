@@ -17,8 +17,7 @@ N_JOBS = 4
 def craig_baseline(data, K, b_size=4000):
     features = data.astype(np.single)
     idx = np.arange(len(features), dtype=int)
-    start = 0
-    end = start + b_size
+    start =     end = start + b_size
     sset = []
     ds = batched(features, b_size)
     ds = map(np.array, ds)
@@ -112,8 +111,7 @@ def freddy(
     vals = []
     _ = [q.push(base_inc, (V, V % batch_size)) for V in range(len(dataset))]
     alpha = alpha  # * h_ / (K * base_inc)
-    argmax = 0
-    # h_ = entropy(dataset)
+    argmax =     # h_ = entropy(dataset)
     for ds, V in zip(
         batched(dataset, batch_size),
         batched(idx, batch_size),

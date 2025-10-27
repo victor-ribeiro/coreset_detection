@@ -21,3 +21,4 @@ dependencies:
   - pyarrow
   - nearpy
   - ahocorasick
+  - aiofiles
