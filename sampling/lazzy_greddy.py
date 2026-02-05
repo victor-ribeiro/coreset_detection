@@ -17,7 +17,8 @@ N_JOBS = 4
 def craig_baseline(data, K, b_size=4000):
     features = data.astype(np.single)
     idx = np.arange(len(features), dtype=int)
-    start =     end = start + b_size
+    start = 0
+    end = start + b_size
     sset = []
     ds = batched(features, b_size)
     ds = map(np.array, ds)
@@ -77,18 +78,32 @@ def _base_inc(alpha=1):
 
 def entropy(x):
     x = np.abs(x)
-    total = x.sum()
-    p = x / total
-    p = p[p > 0]
-    return -(p * np.log2(p)).sum()
+    if x.ndim == 1:
+        total = x.sum()
+        if total == 0:
+            return 0.0
+        p = x / total
+        p = p[p > 0]
+        return -(p * np.log2(p)).sum()
+    else:
+        # Vetorizado: entropia por coluna (feature)
+        totals = x.sum(axis=0)
+        totals[totals == 0] = 1  # Evitar divisão por zero
+        p = x / totals
+        h = np.where(p > 0, -p * np.log2(p + 1e-10), 0).sum(axis=0)
+        return h.mean()
 
 
-def utility_score(e, sset, /, acc=0, alpha=0.1, beta=1.1):
+def utility_score(e, sset, /, acc=0, alpha=0.1):
     norm = 1 / _base_inc(alpha)
     argmax = np.maximum(e, sset)
     f_norm = alpha / (sset.sum() + 1)
     util = norm * math.log(1 + (argmax.sum()) * f_norm)
     return util
+
+
+# Garantia teórica para funções submodulares: (1 - 1/e) ≈ 0.632
+SUBMODULAR_GUARANTEE = 1 - 1 / math.e
 
 
 @timeit
@@ -101,50 +116,65 @@ def freddy(
     batch_size=1000,
     beta=0.75,
     return_vals=False,
+    opt_threshold=SUBMODULAR_GUARANTEE,
 ):
     # basic config
     base_inc = _base_inc(alpha)
     idx = np.arange(len(dataset))
-    dataset = dataset[idx]
+    dataset = dataset[idx].astype(np.float32)
     q = Queue()
     sset = []
     vals = []
-    _ = [q.push(base_inc, (V, V % batch_size)) for V in range(len(dataset))]
-    alpha = alpha  # * h_ / (K * base_inc)
-    argmax =     # h_ = entropy(dataset)
+
+    # Variáveis para early stopping por fração do ótimo
+    f_current = 0.0
+    f_opt_estimate = 0.0
+
+    argmax = 0
     for ds, V in zip(
         batched(dataset, batch_size),
         batched(idx, batch_size),
     ):
-        ds = np.array(ds)
-        D = pairwise_distances(ds)
-        D = D.max() - D  # * (h_ - entropy(dataset[sset]))
+        for v in V:
+            q.push(base_inc, (v, v % batch_size))
+
+        ds = np.asarray(ds)
+        D = pairwise_distances(ds, metric="euclidean")
+        D = D.max(axis=1, keepdims=True) - D
         localmax = np.amax(D, axis=1)
         argmax += localmax.sum()
-        n = len(sset)
 
-        h_ = entropy(ds)
+        # Estimar upper bound do ótimo
+        f_opt_estimate += localmax.sum()
+
         while q and len(sset) < K:
             score, idx_s = q.head
             s = D[idx_s[1]]
-            score_s = utility_score(
-                s, localmax, acc=argmax, alpha=alpha * h_, beta=beta
-            )
+            score_s = utility_score(s, localmax, acc=argmax, alpha=alpha)
             inc = score_s - score
-            if (inc < 0) or (not q):
-                # break
+            if inc < 0:
+                # q.push(inc, idx_s)
                 continue
+            if not q:
+                break
             score_t, idx_t = q.head
             if inc > score_t:
                 vals.append(score_s)
                 sset.append(idx_s[0])
+                f_current += inc
+
+                # Early stopping: atingiu fração do ótimo
+                if f_opt_estimate > 0 and f_current >= opt_threshold * f_opt_estimate:
+                    break
             else:
                 q.push(inc, idx_s)
             q.push(score_t, idx_t)
         else:
             break
 
-    np.random.shuffle(sset)
+        if f_opt_estimate > 0 and f_current >= opt_threshold * f_opt_estimate:
+            break
+
     if return_vals:
         return np.array(vals), sset
     return np.array(sset)
