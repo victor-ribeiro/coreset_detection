@@ -80,7 +80,8 @@ def load_bike_share_dataset(config):
         "cnt",
     ]
 
-    dataset = pd.read_csv(path, names=names, engine="pyarrow", skiprows=1, index_col=0)
+    # dataset = pd.read_csv(path, names=names, engine="pyarrow", skiprows=1, index_col=0)
+    dataset = pd.read_csv(path, names=names, skiprows=1, index_col=0)
     ################################ PREPROCESSING  ##########################################
     dataset["dteday"] = (
         OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)
