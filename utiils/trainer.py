@@ -29,15 +29,24 @@ def experiment(
         f"[{sampler_name}]Running experiment with {learner.__name__} on {features.shape[0]} samples"
     )
 
-    # train_feat, test_feat, train_target, test_target = train_test_split(
-    #     features, target, test_size=0.2
-    # )
+    # === WARMUP ===
+    print("Warmup...")
+    # warmup_size = min(1000, len(features))
+    # _s = random_sampler(features, K=warmup_size)
+    # _model = learner(**model_args) if model_args else learner()
+    # _model.fit(features[_s, :], target[_s, :])
+    # del _model
+    print("Warmup done.")
+    # === FIM WARMUP ===
+
     eval_metrics = []
-    for sample in range(resample * runs):
+    for sample in range((resample * runs) + 1):
         if sample % resample == 0:
             train_feat, test_feat, train_target, test_target = train_test_split(
                 features, target, test_size=0.2
             )
+        # train_feat = minmax_scale(train_feat)
+        # test_feat = minmax_scale(test_feat)
         run = sample % resample
         print(f"Run {(sample) + 1}/{runs*resample} ")
         model = learner(**model_args) if model_args else learner()
@@ -83,6 +92,8 @@ def experiment(
             print("starting training")
             init_train = perf_counter()
             model.fit(train_feat[sset], train_target[sset])
+            if not sample:
+                continue
             end_time = perf_counter()
             print(f"Training time: {end_time - init_train:.2f} seconds")
             test_pred = model.predict(test_feat)
