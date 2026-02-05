@@ -20,5 +20,3 @@ dependencies:
   - torchdata
   - pyarrow
   - nearpy
-  - ahocorasick
-  - aiofiles
