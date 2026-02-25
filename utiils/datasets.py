@@ -6,6 +6,11 @@ from sklearn.preprocessing import (
     LabelBinarizer,
     StandardScaler,
 )
+from sklearn.metrics import (
+    root_mean_squared_error,
+    accuracy_score,
+    precision_score,
+)
 
 import numpy as np
 import pandas as pd
@@ -13,6 +18,7 @@ import json
 
 ROOT = Path(__file__).resolve(strict=True).parent.parent
 DATA_ROOT = ROOT / "data"
+CONFIG_DIR = ROOT / ".config"
 
 DATASETS = {}
 
@@ -29,6 +35,42 @@ def load_config(path):
     with open(path, "r") as file:
         config = json.load(file)
     return config
+
+
+# Mapeamento dataset_name -> nome da função registrada
+_DATASET_LOADER_MAP = {
+    "adult": "load_adult_dataset",
+    "bike_share": "load_bike_share_dataset",
+    "covtype": "load_covtype_dataset",
+    "sgemm": "load_sgemm_dataset",
+    "hepmass": "load_hepmass_dataset",
+    "predictmds": "load_predictmds_dataset",
+    "storage_perf": "load_storage_dataset",
+    "higgs": "load_higgs_dataset",
+}
+
+DATASET_METRICS = {
+    "higgs": [accuracy_score, precision_score],
+    "covtype": [accuracy_score, precision_score],
+    "adult": [accuracy_score, precision_score],
+    "hepmass": [accuracy_score, precision_score],
+    "storage_perf": [root_mean_squared_error],
+    "predictmds": [root_mean_squared_error],
+    "sgemm": [root_mean_squared_error],
+    "bike_share": [root_mean_squared_error],
+}
+
+
+def load_dataset(name):
+    loader_name = _DATASET_LOADER_MAP[name]
+    loader = DATASETS[loader_name]
+    config_path = CONFIG_DIR / f"{name}.json"
+    config = load_config(config_path)
+    return loader(config)
+
+
+def get_metric_functions(dataset_name):
+    return DATASET_METRICS[dataset_name]
 
 
 @register
@@ -102,6 +144,8 @@ def load_bike_share_dataset(config):
 
 @register
 def load_covtype_dataset(config):
+    from sklearn.decomposition import PCA
+
     names = [
         "elevation",
         "aspect",
@@ -160,11 +204,13 @@ def load_covtype_dataset(config):
         "cover_type",
     ]
     path = DATA_ROOT / Path(config["root"])
-
+    pca = PCA(n_components=15)
     dataset = pd.read_csv(path, engine="pyarrow", names=names)
     dataset[config["target"]] -= 1
     target = dataset.pop(config["target"])
-    return dataset.values, target.values
+    dataset = normalize(dataset.values)
+    return pca.fit_transform(dataset), target.values
+    # return dataset.values, target.values
 
 
 @register

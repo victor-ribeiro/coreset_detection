@@ -98,7 +98,7 @@ def utility_score(e, sset, /, acc=0, alpha=0.1):
     norm = 1 / _base_inc(alpha)
     argmax = np.maximum(e, sset)
     f_norm = alpha / (sset.sum() + 1)
-    util = norm * math.log(1 + (argmax.sum()) * f_norm)
+    util = norm * math.log(1 + (argmax.sum() + acc))
     return util
 
 
@@ -127,8 +127,6 @@ def freddy(
     vals = []
 
     # Variáveis para early stopping por fração do ótimo
-    f_current = 0.0
-    f_opt_estimate = 0.0
 
     argmax = 0
     for ds, V in zip(
@@ -144,16 +142,13 @@ def freddy(
         localmax = np.amax(D, axis=1)
         argmax += localmax.sum()
 
-        # Estimar upper bound do ótimo
-        f_opt_estimate += localmax.sum()
-
         while q and len(sset) < K:
             score, idx_s = q.head
             s = D[idx_s[1]]
             score_s = utility_score(s, localmax, acc=argmax, alpha=alpha)
             inc = score_s - score
             if inc < 0:
-                # q.push(inc, idx_s)
+                q.push(inc, idx_s)
                 continue
             if not q:
                 break
@@ -161,19 +156,10 @@ def freddy(
             if inc > score_t:
                 vals.append(score_s)
                 sset.append(idx_s[0])
-                f_current += inc
 
-                # Early stopping: atingiu fração do ótimo
-                if f_opt_estimate > 0 and f_current >= opt_threshold * f_opt_estimate:
-                    break
             else:
                 q.push(inc, idx_s)
             q.push(score_t, idx_t)
-        else:
-            break
-
-        if f_opt_estimate > 0 and f_current >= opt_threshold * f_opt_estimate:
-            break
 
     if return_vals:
         return np.array(vals), sset
