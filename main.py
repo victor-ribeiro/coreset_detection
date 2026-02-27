@@ -114,12 +114,13 @@ def cmd_model_train(args):
 
     df = pd.DataFrame.from_records(results)
 
+    dataset_name = df["dataset"].iloc[0]
     if args.method == "none":
-        fname = f"{args.model}_none_1.0.csv"
+        fname = f"{dataset_name}_{args.model}_none_1.0.csv"
     else:
         metodo = df["metodo"].iloc[0]
         fracao = df["fracao"].iloc[0]
-        fname = f"{args.model}_{metodo}_{fracao}.csv"
+        fname = f"{dataset_name}_{args.model}_{metodo}_{fracao}.csv"
 
     output_dir = Path(args.output) / args.name
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -162,37 +163,37 @@ def _train_on_coreset(model_cls, args):
         test_feat, test_target = features[test_idx], target[test_idx]
         run_idx = int(train_file.stem.split("_")[1])
         # coreset_idx = np.load(run_file)
+        for i in range(5):
+            model = model_cls()
+            t0 = perf_counter()
+            model.fit(train_feat, train_target)
+            train_time = perf_counter() - t0
 
-        model = model_cls()
-        t0 = perf_counter()
-        model.fit(train_feat, train_target)
-        train_time = perf_counter() - t0
+            test_pred = model.predict(test_feat)
+            # sel_time = selection_times[run_idx] if run_idx < len(selection_times) else 0
 
-        test_pred = model.predict(test_feat)
-        # sel_time = selection_times[run_idx] if run_idx < len(selection_times) else 0
+            for metric_fn in metrics:
+                try:
+                    value = metric_fn(test_target, test_pred)
+                except Exception:
+                    value = metric_fn(test_target, test_pred, average="macro")
 
-        for metric_fn in metrics:
-            try:
-                value = metric_fn(test_target, test_pred)
-            except Exception:
-                value = metric_fn(test_target, test_pred, average="macro")
+                results.append(
+                    {
+                        "dataset": dataset_name,
+                        "metodo": method,
+                        "fracao": frac,
+                        "metrica": metric_fn.__name__,
+                        "valor": value,
+                        "modelo": model_cls.__name__,
+                        "run": run_idx + i,
+                        "train_time": train_time,
+                        "selection_time": metadata.get("selection_times"),
+                    }
+                )
 
-            results.append(
-                {
-                    "dataset": dataset_name,
-                    "metodo": method,
-                    "fracao": frac,
-                    "metrica": metric_fn.__name__,
-                    "valor": value,
-                    "modelo": model_cls.__name__,
-                    "run": run_idx,
-                    "train_time": train_time,
-                    "selection_time": metadata.get("selection_times"),
-                }
-            )
-
-        del model
-        print(f"  run_{run_idx}: train_time={train_time:.2f}s")
+            del model
+            print(f"  run_{run_idx+i}: train_time={train_time:.2f}s")
 
     return results
 

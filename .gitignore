@@ -175,3 +175,9 @@ cython_debug/
 
 data/
 *.csv
+
+
+
+coreset/
+figs/
+nohup.out

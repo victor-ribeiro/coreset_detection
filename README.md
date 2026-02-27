@@ -1,1 +1,0 @@
-# coreset_detection
