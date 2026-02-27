@@ -61,7 +61,7 @@ def cmd_select_coreset(args):
 
     for run_idx in range(args.runs):
         train_idx, test_idx = train_test_split(
-            full_set, test_size=args.test_size  # , random_state=42
+            full_set, test_size=args.test_size, random_state=42
         )
         K = (
             int(len(train_idx) * args.train_frac)
@@ -82,16 +82,15 @@ def cmd_select_coreset(args):
                 if isinstance(v, (int, float, str, bool))
             },
             "runs": args.runs,
-            "selection_times": [],
             "created_at": datetime.now().isoformat(),
         }
 
         print(f"  Run {run_idx + 1}/{args.runs} - K={K} ({args.train_frac*100:.1f}%)")
         elapsed, indices = sampler_fn(train_feat, K=K, **sampling_args)
+        metadata["selection_times"] = elapsed
         np.save(out_dir / f"train_{run_idx}.npy", train_idx[indices])
         np.save(out_dir / f"test_{run_idx}.npy", test_idx)
 
-        metadata["selection_times"].append(elapsed)
         print(
             f"    Tempo de selecao: {elapsed:.2f}s, {len(indices)} indices selecionados"
         )
@@ -149,7 +148,7 @@ def _train_on_coreset(model_cls, args):
         dataset_name = metadata["dataset"]
         method = metadata["method"]
         frac = metadata["train_frac"]
-        selection_times = metadata.get("selection_times", [])
+        # selection_times = metadata.get("selection_times")
 
         features, target = load_dataset(dataset_name)
         metrics = get_metric_functions(dataset_name)
@@ -170,7 +169,7 @@ def _train_on_coreset(model_cls, args):
         train_time = perf_counter() - t0
 
         test_pred = model.predict(test_feat)
-        sel_time = selection_times[run_idx] if run_idx < len(selection_times) else 0
+        # sel_time = selection_times[run_idx] if run_idx < len(selection_times) else 0
 
         for metric_fn in metrics:
             try:
@@ -180,6 +179,7 @@ def _train_on_coreset(model_cls, args):
 
             results.append(
                 {
+                    "dataset": dataset_name,
                     "metodo": method,
                     "fracao": frac,
                     "metrica": metric_fn.__name__,
@@ -187,7 +187,7 @@ def _train_on_coreset(model_cls, args):
                     "modelo": model_cls.__name__,
                     "run": run_idx,
                     "train_time": train_time,
-                    "selection_time": sel_time,
+                    "selection_time": metadata.get("selection_times"),
                 }
             )
 
@@ -221,6 +221,7 @@ def _train_full_dataset(model_cls, args):
 
         results.append(
             {
+                "dataset": args.dataset,
                 "metodo": "none",
                 "fracao": 1.0,
                 "metrica": metric_fn.__name__,

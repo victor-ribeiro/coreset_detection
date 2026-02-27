@@ -98,7 +98,9 @@ def utility_score(e, sset, /, acc=0, alpha=0.1):
     norm = 1 / _base_inc(alpha)
     argmax = np.maximum(e, sset)
     f_norm = alpha / (sset.sum() + 1)
-    util = norm * math.log(1 + (argmax.sum() + acc))
+    # util = norm * math.log(1 + (argmax.sum() + acc))
+    util = norm * math.log(1 + (argmax.sum()))
+
     return util
 
 
@@ -122,7 +124,6 @@ def freddy(
     base_inc = _base_inc(alpha)
     idx = np.arange(len(dataset))
     dataset = dataset[idx].astype(np.float32)
-    q = Queue()
     sset = []
     vals = []
 
@@ -133,6 +134,7 @@ def freddy(
         batched(dataset, batch_size),
         batched(idx, batch_size),
     ):
+        q = Queue()
         for v in V:
             q.push(base_inc, (v, v % batch_size))
 
@@ -149,17 +151,20 @@ def freddy(
             inc = score_s - score
             if inc < 0:
                 q.push(inc, idx_s)
-                continue
+                break
             if not q:
                 break
             score_t, idx_t = q.head
             if inc > score_t:
                 vals.append(score_s)
                 sset.append(idx_s[0])
+                # break
 
             else:
                 q.push(inc, idx_s)
             q.push(score_t, idx_t)
+        else:
+            break
 
     if return_vals:
         return np.array(vals), sset
