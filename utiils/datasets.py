@@ -1,7 +1,11 @@
 from pathlib import Path
+from sklearn.compose import ColumnTransformer
+from sklearn.decomposition import PCA
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import (
+    FunctionTransformer,
+    MinMaxScaler,
     OrdinalEncoder,
-    minmax_scale,
     normalize,
     LabelBinarizer,
     StandardScaler,
@@ -73,6 +77,34 @@ def get_metric_functions(dataset_name):
     return DATASET_METRICS[dataset_name]
 
 
+def get_pipeline(name):
+    """Return a sklearn Pipeline that must be fit on train and applied to train+test.
+
+    Datasets with no learned transforms return Pipeline([]).
+    Fits MUST be done on train split only to avoid data leakage.
+
+    Spec: specs/technical/dataset_preprocessing.md
+    """
+    if name == "covtype":
+        return Pipeline([
+            ("normalize", FunctionTransformer(normalize)),
+            ("pca", PCA(n_components=15, random_state=42)),
+        ])
+    if name == "bike_share":
+        # FRAGILE: col indices depend on loader column order.
+        # casual=col10, registered=col11 after OrdinalEncoder + get_dummies in loader.
+        # If load_bike_share_dataset changes column order, update these indices.
+        return Pipeline([
+            ("scale_casual_registered", ColumnTransformer(
+                transformers=[
+                    ("minmax", MinMaxScaler(), [10, 11]),
+                ],
+                remainder="passthrough",
+            )),
+        ])
+    return Pipeline([("passthrough", FunctionTransformer())])
+
+
 @register
 def load_adult_dataset(config):
     path = config["root"]
@@ -80,6 +112,7 @@ def load_adult_dataset(config):
     dataset = pd.read_csv(path)
     dataset[config["target"]] = dataset[config["target"]].map({">50K": 1, "<=50K": 0})
     dataset.replace(" ?", np.nan, inplace=True)
+    dataset.dropna(inplace=True)
     dataset = pd.get_dummies(
         dataset,
         columns=[
@@ -136,7 +169,6 @@ def load_bike_share_dataset(config):
         drop_first=False,
         dtype=int,
     )
-    dataset[["casual", "registered"]] = minmax_scale(dataset[["casual", "registered"]])
     ##########################################################################################
     target = dataset.pop(config["target"])
     return dataset.values, target.values
@@ -144,8 +176,6 @@ def load_bike_share_dataset(config):
 
 @register
 def load_covtype_dataset(config):
-    from sklearn.decomposition import PCA
-
     names = [
         "elevation",
         "aspect",
@@ -204,13 +234,10 @@ def load_covtype_dataset(config):
         "cover_type",
     ]
     path = DATA_ROOT / Path(config["root"])
-    pca = PCA(n_components=15)
     dataset = pd.read_csv(path, engine="pyarrow", names=names)
     dataset[config["target"]] -= 1
     target = dataset.pop(config["target"])
-    dataset = normalize(dataset.values)
-    return pca.fit_transform(dataset), target.values
-    # return dataset.values, target.values
+    return dataset.values.astype(np.float32), target.values
 
 
 @register
@@ -237,17 +264,9 @@ def load_sgemm_dataset(config):
         "Run4 (ms)",
     ]
     dataset = pd.read_csv(path, engine="pyarrow", index_col=0, skiprows=1, names=names)
-    # dataset[config["target"]] = dataset[
-    #     ["Run1 (ms)", "Run2 (ms)", "Run3 (ms)", "Run4 (ms)"]
-    # ].mean(axis=1)
-    target = dataset.loc[:, ["Run1 (ms)", "Run2 (ms)", "Run3 (ms)", "Run4 (ms)"]]
-    dataset = dataset.drop(columns=["Run1 (ms)", "Run2 (ms)", "Run3 (ms)", "Run4 (ms)"])
-    # target = dataset.pop(config["target"])
-    # dataset = normalize(
-    #     dataset,
-    #     axis=0,
-    #     norm="max",
-    # )
+    run_cols = ["Run1 (ms)", "Run2 (ms)", "Run3 (ms)", "Run4 (ms)"]
+    target = dataset[run_cols].mean(axis=1)
+    dataset = dataset.drop(columns=run_cols)
     return dataset.values.astype(np.float64), target.values.astype(np.float64)
 
 

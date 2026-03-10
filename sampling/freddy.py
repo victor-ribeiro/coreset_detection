@@ -1,71 +1,161 @@
+import heapq
+import math
 import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances
-from sklearn.cluster import BisectingKMeans
 
 from .utils import timeit
 
 
-def entropy(x):
-    x = np.abs(x)
-    total = x.sum()
-    p = x / total
-    p = p[p > 0]
-    return -(p * np.log2(p)).sum()
+class Queue(list):
+    def __init__(self, *iterable):
+        super().__init__(*iterable)
+        heapq._heapify_max(self)
+
+    def append(self, item):
+        super().append(item)
+        heapq._siftdown_max(self, 0, len(self) - 1)
+
+    def pop(self, index=-1):
+        el = super().pop(index)
+        if not self:
+            return el
+        val, self[0] = self[0], el
+        heapq._siftup_max(self, 0)
+        return val
+
+    @property
+    def head(self):
+        return self.pop()
+
+    def push(self, score, idx):
+        self.append((score, idx))
 
 
-def _n_cluster(dataset, alpha=1, max_iter=100, tol=10e-2):
-    val = np.zeros(max_iter)
-    base = np.log(1 + alpha)
-    for idx, n in enumerate(range(max_iter)):
-        # print(val)
-        sampler = BisectingKMeans(n_clusters=n + 2)
-        sampler.fit(dataset)
-        if val[:idx].sum() == 0:
+def _base_inc(alpha=1):
+    alpha = abs(alpha)
+    return math.log(1 + alpha)
 
-            val[idx] = np.log(1 + sampler.inertia_ * alpha / base)
-            continue
 
-        val[idx] = np.log(1 + sampler.inertia_ * alpha / val[val > 0].max() / base)
+def _estimate_marginal_gain(sim_row, m_i_batch, n, b):
+    """Eq. 5 — Δ̂_FL(e | S_t) = (n / |B|) * Σ max(0, s(x_i, x_e) - m_i(S_t))
 
-        if abs(val[:idx].min() - val[idx]) < tol:
-            return sampler.inertia_, sampler.cluster_centers_
-    # return sampler.cluster_centers_
-    return ValueError("Does not converge")
+    Source: Ribeiro (2026), FREDDY paper, Section 4.1, Eq. 5
+    """
+    return (n / b) * np.log(1 + np.maximum(0.0, sim_row - m_i_batch).sum())
+
+
+def _update_coverage(m_i, batch_idx, sim_row):
+    """Eq. 7 — m_i(S_{t+1}) ← max(m_i(S_t), s(x_i, x_e)) for x_i in B_t
+
+    Source: Ribeiro (2026), FREDDY paper, Section 4.1, Eq. 7
+    Modifies m_i in-place. Updates only batch points (Monte Carlo approximation).
+    """
+    m_i[batch_idx] = np.maximum(m_i[batch_idx], sim_row)
 
 
 @timeit
-def kmeans_sampler(dataset, K, alpha=1, tol=10e-3, max_iter=500):
-    kmeans = BisectingKMeans(n_clusters=10)
-    kmeans.fit(dataset)
-    clusters = kmeans.cluster_centers_
-    base = np.log(1 + alpha)
-    print(f"Found {len(clusters)} clusters, tol: {tol}")
-    dist = pairwise_distances(dataset, clusters)
-    dist -= np.amax(dist, axis=0)
-    dist = np.abs(dist).sum(axis=1)
-    sset = np.argsort(dist, kind="heapsort")[::-1]
-    return sset[:K]
-
-
-@timeit
-def pmi_kmeans_sampler(
+def freddy(
     dataset,
-    K,
-    alpha=1,
-    tol=1,
-    max_iter=500,
+    K=1,
+    alpha=0.15,
+    batch_size=1000,
+    beta=0.75,
+    return_vals=False,
+    **kwargs,
 ):
-    _, clusters = _n_cluster(dataset, alpha=alpha, max_iter=max_iter, tol=tol)
-    print(f"Found {len(clusters)} clusters, tol: {tol}")
-    dist = pairwise_distances(clusters, dataset)
-    softmax = np.exp(dist - dist.max())
-    softmax /= dist.sum()
-    h_c = entropy(clusters)
-    h_p = entropy(dataset)
-    pmi = np.log2(K)
+    """FREDDY: Fast Reduction of Elements for Data-driven Yielding.
 
-    pmi = ((1 - softmax) / (dist * (h_p - h_c))).sum(axis=0)
-    # sset = np.argsort(pmi, kind="heapsort")
-    sset = np.argsort(pmi, kind="heapsort")[::-1]
+    Stochastic greedy coreset selection via Facility Location maximization.
+    Implements Algorithm 1 from Ribeiro (2026).
 
-    return sset[:K]
+    Parameters
+    ----------
+    dataset : np.ndarray, shape (n, d)
+        Pre-processed feature matrix (float32).
+    K : int
+        Budget — exactly K indices are returned.
+    alpha : float
+        Submodular gain parameter (default 0.15).
+    batch_size : int
+        Mini-batch size b. Mini-batches serve as Monte Carlo estimators,
+        not domain restriction (Ribeiro 2026, Section 4.1).
+    beta : float
+        Reserved parameter (unused in F_FL; kept for interface compatibility).
+    return_vals : bool
+        If True, also return marginal gain values.
+
+    Returns
+    -------
+    np.ndarray, shape (K,)
+        Exactly K selected indices into dataset.
+    """
+    dataset = np.asarray(dataset, dtype=np.float32)
+    n = len(dataset)
+    b = min(batch_size, n)
+    base_score = _base_inc(alpha)
+
+    # Algorithm 1: Initialize S ← ∅, m_i ← 0 for all x_i ∈ X
+    sset = []
+    vals = []
+    m_i = np.zeros(n, dtype=np.float64)  # global coverage state, persistent
+    # Safety: bound outer iterations to avoid infinite loop when K/n is high
+    # (FREDDY assumes K << n; with K≈n, lazy greedy may reject all candidates per batch)
+    max_outer = max(K * 10, 1000)
+    outer_iter = 0
+
+    # Algorithm 1: while |S| < K
+    while len(sset) < K and outer_iter < max_outer:
+        outer_iter += 1
+        # Algorithm 1: Sample B ⊂ X uniformly at random, |B| = b
+        batch_idx = np.random.choice(n, size=b, replace=False)
+        batch_ds = dataset[batch_idx]
+
+        # Similarity matrix for this batch: s(x_i, x_e) = D_max - D (within-batch)
+        D = pairwise_distances(batch_ds, metric="euclidean")
+        sim = D.max() - D  # shape (b, b)
+
+        # Algorithm 1: Initialize priority queue Q with elements in B
+        q = Queue()
+        for loc_idx, glob_idx in enumerate(batch_idx):
+            q.push(base_score, (glob_idx, loc_idx))
+
+        # Algorithm 1: while Q not empty and |S| < K
+        while q and len(sset) < K:
+            score, (glob_idx, loc_idx) = q.head
+
+            # Algorithm 1: Estimate marginal gain Δ̂(e | S) using B (Eq.sim_row 5)
+            sim_row = sim[loc_idx]  # s(x_i, x_e) for all x_i in batch
+            gain = _estimate_marginal_gain(sim_row, m_i[batch_idx], n, b)
+            inc = gain - score
+
+            if inc < 0:
+                # Re-insert with updated priority and break (lazy greedy)
+                q.push(inc, (glob_idx, loc_idx))
+                break
+
+            if not q:
+                break
+
+            score_t, idx_t = q.head
+
+            # Algorithm 1: if e has highest estimated gain → S ← S ∪ {e}
+            if inc >= score_t:
+                sset.append(glob_idx)
+                vals.append(gain)
+                # Algorithm 1: Update m_i for x_i in B (Eq. 7)
+                _update_coverage(m_i, batch_idx, sim_row)
+            else:
+                q.push(inc, (glob_idx, loc_idx))
+
+            q.push(score_t, idx_t)
+
+    # Fallback: if max_outer reached before K, fill remainder randomly
+    diff = K - len(sset)
+    if diff > 0:
+        remaining = np.setdiff1d(np.arange(n), sset, assume_unique=True)
+        extra = np.random.choice(remaining, size=diff, replace=False)
+        sset.extend(extra.tolist())
+
+    if return_vals:
+        return np.array(vals), np.array(sset)
+    return np.array(sset)

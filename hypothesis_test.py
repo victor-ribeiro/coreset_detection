@@ -79,15 +79,24 @@ def get_args():
 
 def load_experiment_data(experiment_dir: Path) -> pd.DataFrame:
     """Carrega todos os CSVs de um diretório de experimento."""
+    required_cols = {"metodo", "metrica", "fracao", "valor"}
     all_data = []
     for csv_file in experiment_dir.glob("*.csv"):
         df = pd.read_csv(csv_file)
+        missing = required_cols - set(df.columns)
+        if missing:
+            raise ValueError(
+                f"{csv_file.name}: colunas ausentes {missing}. "
+                f"Esperado: {required_cols}. Encontrado: {set(df.columns)}"
+            )
         all_data.append(df)
 
     if not all_data:
         raise ValueError(f"Nenhum CSV encontrado em {experiment_dir}")
 
-    return pd.concat(all_data, ignore_index=True)
+    data = pd.concat(all_data, ignore_index=True)
+    data["fracao"] = data["fracao"].round(4)
+    return data
 
 
 def paired_ttest(group1: np.ndarray, group2: np.ndarray, alpha: float = 0.05):
@@ -131,37 +140,37 @@ def run_hypothesis_tests(
 
     # Filtrar por métrica se especificado
     if metric_filter:
-        data = data[data["metric"] == metric_filter]
+        data = data[data["metrica"] == metric_filter]
 
     # Filtrar por fração se especificado
     if frac_filter:
-        data = data[data["frac"] == frac_filter]
+        data = data[data["fracao"] == frac_filter]
 
     # Obter métodos únicos (excluindo baseline)
-    methods = data["method"].unique()
+    methods = data["metodo"].unique()
     methods = [m for m in methods if m != baseline and m is not None]
 
     # Obter métricas e frações únicas
-    metrics = data["metric"].unique()
-    fracs = data["frac"].dropna().unique()
+    metrics = data["metrica"].unique()
+    fracs = data["fracao"].dropna().unique()
 
-    baseline_data = data[data["method"] == baseline]
+    baseline_data = data[data["metodo"] == baseline]
 
     for method in methods:
-        method_data = data[data["method"] == method]
+        method_data = data[data["metodo"] == method]
 
         for metric in metrics:
             for frac in fracs:
                 # Filtrar dados
                 b_values = baseline_data[
-                    (baseline_data["metric"] == metric) &
-                    (baseline_data["frac"] == frac)
-                ]["test"].values
+                    (baseline_data["metrica"] == metric) &
+                    (baseline_data["fracao"] == frac)
+                ]["valor"].values
 
                 m_values = method_data[
-                    (method_data["metric"] == metric) &
-                    (method_data["frac"] == frac)
-                ]["test"].values
+                    (method_data["metrica"] == metric) &
+                    (method_data["fracao"] == frac)
+                ]["valor"].values
 
                 if len(b_values) < 2 or len(m_values) < 2:
                     continue
@@ -231,9 +240,9 @@ if __name__ == "__main__":
     print(f"Carregando dados de: {output_dir}")
     data = load_experiment_data(output_dir)
     print(f"Total de registros: {len(data)}")
-    print(f"Métodos encontrados: {data['method'].unique()}")
-    print(f"Métricas: {data['metric'].unique()}")
-    print(f"Frações: {sorted(data['frac'].dropna().unique())}")
+    print(f"Métodos encontrados: {data['metodo'].unique()}")
+    print(f"Métricas: {data['metrica'].unique()}")
+    print(f"Frações: {sorted(data['fracao'].dropna().unique())}")
 
     # Executar testes
     results = run_hypothesis_tests(

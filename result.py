@@ -23,6 +23,7 @@ METHOD_LABELS = {
     "freddy": "Freddy",
     "random": "Random",
     "gradmatch": "GradMatch",
+    'craig':'craig'
 }
 METRIC_LABELS = {
     "accuracy_score": "Accuracy",
@@ -62,7 +63,7 @@ for dataset in datasets:
                 hue="metodo_label",
                 ax=ax,
                 palette="Set2",
-                fliersize=2,
+                # fliersize=2,
             )
             ax.set_title(modelo, fontsize=12)
             ax.set_xlabel("Fração de seleção")
@@ -76,7 +77,6 @@ for dataset in datasets:
         # Remover eixos vazios
         for idx in range(len(modelos_ds), nrows * ncols):
             axes[idx // ncols, idx % ncols].set_visible(False)
-
         fig.tight_layout()
         fig.savefig(f"figs/{dataset}_{metrica}_por_modelo.pdf", bbox_inches="tight", dpi=150)
         fig.savefig(f"figs/{dataset}_{metrica}_por_modelo.png", bbox_inches="tight", dpi=150)

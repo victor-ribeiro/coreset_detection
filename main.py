@@ -6,6 +6,7 @@ from time import perf_counter
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from sklearn.neighbors import NearestNeighbors
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.linear_model import (
@@ -17,7 +18,7 @@ from sklearn.linear_model import (
 from xgboost import XGBClassifier, XGBRegressor
 
 from utiils.arguments import get_args
-from utiils.datasets import load_dataset, get_metric_functions
+from utiils.datasets import load_dataset, get_metric_functions, get_pipeline
 from sampling import SAMPLERS
 
 MODELS = {
@@ -36,6 +37,23 @@ MODELS = {
 SAMPLING_HYPERPARAMS = ["alpha", "tol", "max_iter", "batch_size", "beta", "b_size"]
 
 
+def compute_coverage_mean(X_train: np.ndarray, coreset_feat: np.ndarray) -> float:
+    """Mean distance from each train point to its nearest coreset neighbor.
+
+    coverage_mean = (1/n) * Σ_i min_j d(x_i, c_j)
+
+    Lower = better coverage (coreset more representative of training space).
+    Spec: specs/technical/coverage_metric.md
+    Ref: Har-Peled & Mazumdar (2004), STOC.
+    """
+    if len(coreset_feat) == 0:
+        return float("nan")
+    nn = NearestNeighbors(n_neighbors=1, algorithm="auto")
+    nn.fit(coreset_feat)
+    distances, _ = nn.kneighbors(X_train)
+    return float(distances.mean())
+
+
 def cmd_select_coreset(args):
     features, target = load_dataset(args.dataset)
     print(
@@ -51,24 +69,21 @@ def cmd_select_coreset(args):
 
     n_samples = len(features)
     full_set = np.arange(n_samples)
+    pipeline = get_pipeline(args.dataset)
 
     out_dir = Path(args.output_dir) / args.dataset / args.method / str(args.train_frac)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Salvar indices de treino e teste
-    # np.save(out_dir / "train_idx.npy", train_idx)
-    # np.save(out_dir / "test_idx.npy" )
-
     for run_idx in range(args.runs):
         train_idx, test_idx = train_test_split(
-            full_set, test_size=args.test_size, random_state=42
+            full_set, test_size=args.test_size, random_state=run_idx
         )
         K = (
             int(len(train_idx) * args.train_frac)
             if args.train_frac < 1
             else int(args.train_frac)
         )
-        train_feat = features[train_idx]
+        train_feat = pipeline.fit_transform(features[train_idx])
         metadata = {
             "dataset": args.dataset,
             "method": args.method,
@@ -88,6 +103,7 @@ def cmd_select_coreset(args):
         print(f"  Run {run_idx + 1}/{args.runs} - K={K} ({args.train_frac*100:.1f}%)")
         elapsed, indices = sampler_fn(train_feat, K=K, **sampling_args)
         metadata["selection_times"] = elapsed
+        metadata["coverage_mean"] = compute_coverage_mean(train_feat, train_feat[indices])
         np.save(out_dir / f"train_{run_idx}.npy", train_idx[indices])
         np.save(out_dir / f"test_{run_idx}.npy", test_idx)
 
@@ -122,7 +138,7 @@ def cmd_model_train(args):
         fracao = df["fracao"].iloc[0]
         fname = f"{dataset_name}_{args.model}_{metodo}_{fracao}.csv"
 
-    output_dir = Path(args.output) / args.name
+    output_dir = Path(args.output) / args.name / args.model / dataset_name
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / fname
     df.to_csv(output_path, index=False)
@@ -153,18 +169,26 @@ def _train_on_coreset(model_cls, args):
 
         features, target = load_dataset(dataset_name)
         metrics = get_metric_functions(dataset_name)
+        pipeline = get_pipeline(dataset_name)
 
         # Ler indices de treino/teste salvos pelo select-coreset
 
         train_idx = np.load(train_file)
         test_idx = np.load(test_file)
 
-        train_feat, train_target = features[train_idx], target[train_idx]
-        test_feat, test_target = features[test_idx], target[test_idx]
+        train_raw = features[train_idx]
+        test_raw = features[test_idx]
+        train_feat = pipeline.fit_transform(train_raw)
+        test_feat = pipeline.transform(test_raw)
+        train_target, test_target = target[train_idx], target[test_idx]
         run_idx = int(train_file.stem.split("_")[1])
         # coreset_idx = np.load(run_file)
         for i in range(5):
-            model = model_cls()
+            seed = run_idx * 5 + i
+            try:
+                model = model_cls(random_state=seed)
+            except TypeError:
+                model = model_cls()
             t0 = perf_counter()
             model.fit(train_feat, train_target)
             train_time = perf_counter() - t0
@@ -186,14 +210,16 @@ def _train_on_coreset(model_cls, args):
                         "metrica": metric_fn.__name__,
                         "valor": value,
                         "modelo": model_cls.__name__,
-                        "run": run_idx + i,
+                        "run": run_idx,
+                        "train_rep": i,
                         "train_time": train_time,
                         "selection_time": metadata.get("selection_times"),
+                        "coverage_mean": metadata.get("coverage_mean", float("nan")),
                     }
                 )
 
             del model
-            print(f"  run_{run_idx+i}: train_time={train_time:.2f}s")
+            print(f"  run_{run_idx} rep_{i}: train_time={train_time:.2f}s")
 
     return results
 
@@ -201,10 +227,13 @@ def _train_on_coreset(model_cls, args):
 def _train_full_dataset(model_cls, args):
     features, target = load_dataset(args.dataset)
     metrics = get_metric_functions(args.dataset)
+    pipeline = get_pipeline(args.dataset)
 
-    train_feat, test_feat, train_target, test_target = train_test_split(
+    train_raw, test_raw, train_target, test_target = train_test_split(
         features, target, test_size=args.test_size, random_state=42
     )
+    train_feat = pipeline.fit_transform(train_raw)
+    test_feat = pipeline.transform(test_raw)
 
     model = model_cls()
     t0 = perf_counter()
@@ -231,6 +260,7 @@ def _train_full_dataset(model_cls, args):
                 "run": 0,
                 "train_time": train_time,
                 "selection_time": 0,
+                "coverage_mean": float("nan"),
             }
         )
 

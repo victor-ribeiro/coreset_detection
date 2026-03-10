@@ -14,7 +14,7 @@ MODELS = [
     "SGDRegressor",
 ]
 
-METHODS = ["random", "kmeans", "pmi_kmeans", "freddy", "craig", "gradmatch"]
+METHODS = ["random", "freddy", "craig", "gradmatch"]
 
 DATASET_NAMES = [
     "sgemm",
@@ -33,7 +33,9 @@ def get_args():
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # === select-coreset ===
-    sel = subparsers.add_parser("select-coreset", help="Selecionar coreset e salvar indices")
+    sel = subparsers.add_parser(
+        "select-coreset", help="Selecionar coreset e salvar indices"
+    )
     sel.add_argument("--dataset", "-d", required=True, choices=DATASET_NAMES)
     sel.add_argument("--method", required=True, choices=METHODS)
     sel.add_argument("--train_frac", type=float, required=True)
@@ -49,13 +51,24 @@ def get_args():
     sel.add_argument("--b_size", type=int, default=None)
 
     # === model-train ===
-    trn = subparsers.add_parser("model-train", help="Treinar modelo usando coreset salvo")
+    trn = subparsers.add_parser(
+        "model-train", help="Treinar modelo usando coreset salvo"
+    )
     trn.add_argument("--model", "-m", required=True, choices=MODELS)
-    trn.add_argument("--coreset_dir", type=str, required=True,
-                     help="Caminho para diretorio do coreset (ex: coreset/covtype/freddy/0.05)")
-    trn.add_argument("--method", type=str, default=None,
-                     help="Usar 'none' para treinar no dataset completo")
+    trn.add_argument(
+        "--coreset_dir",
+        type=str,
+        required=True,
+        help="Caminho para diretorio do coreset (ex: coreset/covtype/freddy/0.05)",
+    )
+    trn.add_argument(
+        "--method",
+        type=str,
+        default=None,
+        help="Usar 'none' para treinar no dataset completo",
+    )
     trn.add_argument("--output", "-o", type=str, default="outputs")
     trn.add_argument("--name", "-n", type=str, default="default_experiment")
+    trn.add_argument("--dataset", "-d", required=True, choices=DATASET_NAMES)
 
     return parser.parse_args()
