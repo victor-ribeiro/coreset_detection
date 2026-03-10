@@ -41,7 +41,7 @@ def _estimate_marginal_gain(sim_row, m_i_batch, n, b):
 
     Source: Ribeiro (2026), FREDDY paper, Section 4.1, Eq. 5
     """
-    return np.log(1 + np.maximum(0.0, sim_row - m_i_batch).sum())
+    return np.log(1 + np.maximum(sim_row, m_i_batch).sum())
 
 
 def _update_coverage(m_i, batch_idx, sim_row):
