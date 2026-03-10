@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "versus-claude": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/home/victorribeiro/Documentos/projects/tese/coreset_detection/.versus/server.js"
+      ],
+      "env": {}
+    }
+  }
+}
