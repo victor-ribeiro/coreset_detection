@@ -63,11 +63,11 @@ def freddy(
     vals = []
 
     argmax = 0
+    q = Queue()
     for ds, V in zip(
         batched(dataset, batch_size),
         batched(idx, batch_size),
     ):
-        q = Queue()
         for v in V:
             q.push(base_inc, (v, v % batch_size))
 
