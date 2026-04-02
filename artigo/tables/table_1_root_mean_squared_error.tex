@@ -1,0 +1,23 @@
+\begin{table}\label{tab:rmse}
+\caption{root mean squared error collection}
+\centering
+\begin{tabular}{llrr}
+\toprule
+ &  & \multicolumn{2}{r}{test} \\
+ &  & mean & std \\
+dataset & method &  &  \\
+\midrule
+\multirow[t]{4}{*}{predictmds} & freddy & 9.4146 & 0.0251 \\
+ & full dataset & 8.9615 & 0.0641 \\
+ & gradmatch & 9.2884 & 0.0258 \\
+ & random sampler & 9.4138 & 0.0623 \\
+\cline{1-4}
+\multirow[t]{5}{*}{sgemm} & craig baseline & 257.3086 & 7.1037 \\
+ & freddy & 244.7636 & 1.0441 \\
+ & full dataset & 230.6114 & 2.2422 \\
+ & gradmatch & 240.1167 & 2.2638 \\
+ & random sampler & 242.5167 & 3.0699 \\
+\cline{1-4}
+\bottomrule
+\end{tabular}
+\end{table}

@@ -14,7 +14,7 @@ MODELS = [
     "SGDRegressor",
 ]
 
-METHODS = ["random", "freddy", "craig", "gradmatch"]
+METHODS = ["random", "freddy", "craig", "gradmatch", "none"]
 
 DATASET_NAMES = [
     "sgemm",
@@ -70,5 +70,13 @@ def get_args():
     trn.add_argument("--output", "-o", type=str, default="outputs")
     trn.add_argument("--name", "-n", type=str, default="default_experiment")
     trn.add_argument("--dataset", "-d", required=True, choices=DATASET_NAMES)
+
+    # === compute-coverage ===
+    cov = subparsers.add_parser(
+        "compute-coverage", help="Calcular coverage_mean post-hoc para coresets salvos"
+    )
+    cov.add_argument("--coreset_dir", type=str, required=True,
+                     help="Diretorio com train_*.npy e metadata_*.json")
+    cov.add_argument("--dataset", "-d", required=True, choices=DATASET_NAMES)
 
     return parser.parse_args()

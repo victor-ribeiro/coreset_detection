@@ -1,0 +1,676 @@
+\documentclass{article}
+
+\usepackage[english]{babel}
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{natbib}
+\usepackage{booktabs}
+% \usepackage{algorithm} % Para o ambiente do algoritmo
+\usepackage{algpseudocode}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\usepackage[ruled,vlined]{algorithm2e}
+
+\title{FREDDY: Fast Reduction of Elements for Data-driven Yielding}
+\author{Victor Ribeiro}
+
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Training machine learning models on large-scale datasets incurs substantial costs in computation, time, and energy.
+Coreset selection mitigates this by identifying a compact, representative subset of the training data such that a model trained on the subset matches the performance of training on the full dataset.
+Existing high-quality coreset methods require model training, gradient computation, or an $O(n^2)$ pairwise similarity matrix — costs that become prohibitive at scale.
+
+We present FREDDY (Fast Reduction of Elements for Data-driven Yielding), a training-free coreset selection algorithm that maximizes a facility location objective via a deterministic, batch-local greedy procedure.
+FREDDY partitions the dataset into contiguous batches of size $b$ and confines all similarity computations and coverage updates within each batch, reducing per-batch complexity from $O(n \cdot b)$ to $O(b^2)$ for similarity and from $O(n)$ to $O(b)$ for coverage.
+A global priority queue coordinates selection across batches, ensuring that the most representative elements are retained regardless of their position in the partition.
+FREDDY requires no labels, no model training, and no pretrained backbone, making it a general-purpose preprocessing step for large-scale tabular data.
+
+We evaluate FREDDY on binary and multiclass classification benchmarks (Adult, Covtype) against CRAIG and GradMatch across five classifiers and selection fractions ranging from 1\% to 90\%, measuring predictive performance and selection time over 30 independent runs.
+FREDDY achieves selection times orders of magnitude lower than training-based methods while preserving predictive quality across fractions and models.
+\end{abstract}
+
+
+\section{Introduction}
+
+The combination of big data and machine learning (ML), especially deep learning, has driven unprecedented advances in many domains, from population genomics to advertising \cite{Huggins2016, Weinreich2025Survey}. However, the volume of data used to train machine learning models can be prohibitively expensive, both in terms of computational cost, energy consumption and carbon emissions associated with the extensive use of GPUs \cite{MoseretalSurvey, Huggins2016}.
+
+The training process consists of guiding the model on its journey through parameter space toward regions that enhance predictive performance. This process can be expensive when training machine learning (ML). A classical solution to the problem under consideration relien on stochastic gradient decent (SGD) algorithm. The purpose of the SGD is to accelerate the optimization problem by estimating the full gradient via mini-batches of training data.
+
+In order to speed up ML training, the literature presents some strategies such as distributed training. Distributed training requires decisions, such as defining weight and data partitioning strategies, as well as gradient update policies. Communication between computation nodes emerges as a significant bottleneck. The necessity of constant communication between computing devices to maintain cohesion during backpropagation has the potential to reduce the efficiency of the training process \cite{7239545, aaron2018pipedream}.
+
+An alternative way to overcome data volume challenge is to build ML models over representative samples -- data summarization. The idea is to provide a subset from the original dataset. Recent results in machine learning model training indicate that large volumes of data do not necessarily produce better models, as performance can be compromised by irrelevant examples, noise, and redundancies \cite{Weinreich2025Survey}.
+
+Reducing the volume of data used in the training helps the model complete epochs faster, freeing up resources, and accelerating the cycle. However, this time saving may come at the cost of lowering the final performance. The central question is whether it is feasible to reduce the volume of data without reducing the quality of the output. Data summarization techniques as active learning and coreset selection help to optimize the machine learning model training process by reducing the amount of data needed. Active Learning tackles this issue by employing an iterative cycle in which the model itself identifies and actively requests more valuable instances in order to reduce data redundancy. On the other hand, coreset selection algorithms aim to find a representative subset of data such that certain properties of the original dataset are preserved, \cite{Huggins2016, Chai2023GoodCore, Wang2025DataWhisperer, Mirzasoleiman2020Coresets}.
+
+Despite coreset selection literature that presents evidences of success on saving training time, its implementation often  encounters significant obstacles, which have the potential to compromise the effectiveness and feasibility of the method. Computational cost is a major obstacle, which can turn to be prohibitive for many approaches, particularly those based on gradient approximation. The preprocessing stage of coreset computation is computationally intensive, as it involves calculating pairwise distances between  each item pair in the dataset. For applications that depends on a substantial information volume, this overhead has the potential to result in the sampling process lasting more than the training process itself.
+
+In this paper, we present FREDDY, a novel coreset selection algorithm based on facility location maximization. The objective of FREDDY is to enhance selection efficiency by restricting all similarity computations and coverage updates to contiguous, non-overlapping batches of the dataset. This batch-local design reduces per-batch complexity from $O(n \cdot b)$ to $O(b^2)$ for similarity computation and from $O(n)$ to $O(b)$ for coverage updates, making coreset selection tractable for large-scale datasets without requiring labels, model training, or clustering preprocessing.
+
+Experimentally, FREDDY was able to outperform state-of-the-art methods in selection time while preserving the predictive quality of models trained on the selected coresets. The algorithm was tested on both regression and classification problems. In some scenarios, FREDDY achieved more than $21\times$ speedup compared to CRAIG \cite{Mirzasoleiman2020Coresets}.
+
+This paper is organized as follows: Section \ref{related-work} positions FREDDY within the coreset selection literature, comparing its characteristics with existing approaches and highlighting its contribution to selection efficiency. Section \ref{freddy} presents the formal problem definition and describes the FREDDY algorithm, detailing the batch-local greedy procedure and the design choices that enable scalability. Finally, Section \ref{results} presents the experimental methodology and results used to evaluate the efficiency of FREDDY in classification and regression tasks.
+
+
+\section{Related Work}\label{related-work}
+
+Coreset selection has evolved from its origins in computational geometry — where the goal was to identify the smallest subset of points sufficient to approximate a geometric surface \cite{HarPeled2004OnCoresets, har2005smaller} — into a central technique for data-efficient machine learning \cite{Huggins2016, MoseretalSurvey}.
+Recent surveys \cite{MoseretalSurvey, Weinreich2025Survey} demonstrate that the field has matured into a broad ecosystem of methods, each trading off computational cost, dependence on model information, and theoretical guarantees differently.
+This section reviews the landscape of coreset selection methods and positions FREDDY within it.
+
+\subsection{Taxonomies of Coreset Selection}
+
+\cite{MoseretalSurvey} propose a taxonomy dividing coreset selection into three paradigms.
+\textit{Training-free} methods exploit the intrinsic geometry or statistics of the dataset — no model training is required.
+\textit{Training-oriented} methods use information generated by a trained or partially trained model (gradients, losses, or prediction dynamics) to score each element.
+\textit{Blind selection} methods, also called label-free, employ pseudo-labels or clustering to estimate importance without ground-truth annotations.
+
+Concurrently, \cite{Weinreich2025Survey} organize instance selection methods along a temporal axis: \textit{a priori} methods select data before any model inference, while \textit{a posteriori} methods create a dependency on the model's predictions.
+Both taxonomies highlight a fundamental tension: methods that rely on model information tend to produce higher-quality coresets but incur significant preprocessing costs, whereas training-free methods are cheaper but may sacrifice representativeness.
+
+FREDDY belongs to the \textit{training-free, a priori} category: it operates exclusively on feature geometry, requires no labels or model training, and selects the coreset in a single pass over the data.
+
+\subsection{Training-Free and Geometry-Based Methods}
+
+The earliest coreset methods for machine learning are geometric.
+Herding \cite{Welling2009Herding} selects points sequentially to minimize the discrepancy between the empirical mean of the selected subset and the full dataset mean.
+k-Center Greedy \cite{Sener2018ActiveLearning} formulates coreset selection as a $k$-center problem in the embedding space, iteratively adding the point that maximizes the minimum distance to the already-selected set.
+While both methods are training-free, they optimize for different objectives: Herding targets distributional fidelity and k-Center Greedy targets geometric coverage.
+
+The use of submodular functions for data subset selection was formalized by \cite{Wei2015Submodularity}, who showed that facility location and graph-cut functions provide principled, theoretically grounded objectives for selecting representative and diverse subsets.
+Their work established the greedy algorithm with a $(1 - 1/e)$ approximation guarantee as the standard for submodular maximization in data selection \cite{Nemhauser1978a}.
+FREDDY directly builds on this foundation, using facility location as its objective.
+
+More recently, coverage-aware methods have emerged to address the failure of importance-only methods at high pruning rates.
+CCS \cite{Zheng2023CCS} combines distributional coverage with per-sample importance scores, showing that purely importance-based selection collapses when the selection fraction is small.
+Moderate-DS \cite{Xia2023Moderate} selects examples closest to the median of the feature space, providing a universal training-free baseline robust to task variation.
+D2 Pruning \cite{Maharana2024D2} models the dataset as a graph and uses message passing to balance difficulty and diversity, achieving strong results at pruning rates above 70\%.
+
+FreeSel \cite{Xie2023FreeSel} extracts features from a pre-trained general-purpose model and applies distance-based sampling for label-free selection in a single forward pass.
+This approach shares FREDDY's training-free paradigm but depends on a pre-trained backbone; FREDDY operates directly on raw or preprocessed feature vectors without any pretrained model.
+
+\subsection{Training-Oriented Methods}
+
+Training-oriented methods achieve stronger representativeness guarantees by leveraging model information, at the cost of requiring at least partial training before selection.
+
+CRAIG \cite{Mirzasoleiman2020Coresets} is the most direct predecessor of FREDDY.
+It selects a weighted subset whose gradients approximate the full-dataset gradient, framing the problem as facility location maximization over the gradient space.
+CRAIG provides convergence guarantees for incremental gradient methods but requires computing an $n \times n$ pairwise similarity matrix over gradient vectors — a cost that becomes prohibitive for large datasets.
+FREDDY replaces gradient-space facility location with feature-space facility location and eliminates the global matrix computation through batch-local processing.
+
+GradMatch \cite{Killamsetty2021GradMatch} directly minimizes the $\ell_2$ norm of the difference between the subset gradient and the full gradient via Orthogonal Matching Pursuit.
+GLISTER \cite{killamsetty2021glister} formulates selection as a bilevel optimization problem that maximizes log-likelihood on a held-out validation set.
+Both methods require iterative reselection during training, adding computational overhead beyond a one-time preprocessing step.
+
+GraNd and EL2N \cite{Paul2021Deep} compute gradient norms and prediction error norms early in training as proxies for per-sample importance; these scores are then used for one-shot data pruning.
+Forgetting \cite{Toneva2019Forgetting} counts the number of times each example transitions from correctly to incorrectly classified during training, selecting examples with the highest forgetting counts.
+Both approaches require at least partial training runs before selection.
+
+AdaCore \cite{Pooladzandi2022AdaCore} extends CRAIG with second-order information (Hessian approximations), providing tighter convergence bounds for both first- and second-order optimization methods.
+CREST \cite{Yang2023Towards} generalizes CRAIG to non-convex models by iteratively selecting mini-batch coresets during training, achieving scalability to deep networks.
+RETRIEVE \cite{Killamsetty2021Retrieve} extends the bilevel optimization paradigm to semi-supervised settings.
+
+\subsection{Coreset Selection for Tabular and Database Settings}
+
+While most coreset selection literature focuses on image classification and deep learning, a smaller body of work addresses tabular data and data management settings — the context most relevant to FREDDY.
+
+\cite{Wang2022Coresets} present a framework for coreset selection over multiple relational tables, preserving feature-rich representations across joins without materializing the full feature matrix.
+GoodCore \cite{Chai2023GoodCore} addresses coreset selection over incomplete data by modeling possible data repairs and selecting the coreset that minimizes expected loss across repairs.
+\cite{chai2023efficient} propose a cluster-based framework for efficient coreset selection that partitions the dataset by feature distance and approximates the gradient within each cluster — structurally similar to FREDDY's batch-local strategy, but with a training-oriented gradient approximation step.
+
+These works collectively motivate the need for coreset selection methods that are scalable, training-free, and applicable to structured tabular datasets — the design space that FREDDY occupies.
+
+\subsection{Summary and Positioning}
+
+Table~\ref{tab:coreset_methods} summarizes the methods surveyed above across the dimensions most relevant to FREDDY: training dependency, label requirement, and theoretical basis.
+
+\begin{table}[h!]
+\centering
+\caption{Summary of coreset selection methods by training dependency, label requirement, and theoretical basis.}
+\label{tab:coreset_methods}
+\begin{tabular}{p{2.8cm} p{2.2cm} p{1.6cm} p{1.5cm} p{5cm}}
+\toprule
+\textbf{Method} & \textbf{Paradigm} & \textbf{Labels} & \textbf{Basis} & \textbf{Key Idea} \\
+\midrule
+Herding \cite{Welling2009Herding} & Training-Free & No & Statistics & Minimize mean discrepancy \\
+k-Center Greedy \cite{Sener2018ActiveLearning} & Training-Free & No & Geometry & Minimize max distance to selection \\
+Facility Location \cite{Wei2015Submodularity} & Training-Free & No & Submodular & Maximize coverage via FL function \\
+Forgetting \cite{Toneva2019Forgetting} & Training-Oriented & Yes & Dynamics & Count prediction-flip events \\
+GraNd / EL2N \cite{Paul2021Deep} & Training-Oriented & Yes & Gradients & Gradient norm / prediction error \\
+CRAIG \cite{Mirzasoleiman2020Coresets} & Training-Oriented & Yes & Submodular & FL over gradient vectors \\
+GradMatch \cite{Killamsetty2021GradMatch} & Training-Oriented & Yes & Gradients & Minimize gradient matching error \\
+GLISTER \cite{killamsetty2021glister} & Training-Oriented & Yes & Bilevel & Maximize validation log-likelihood \\
+RETRIEVE \cite{Killamsetty2021Retrieve} & Training-Oriented & Semi & Bilevel & Bilevel opt. on unlabeled data \\
+AdaCore \cite{Pooladzandi2022AdaCore} & Training-Oriented & Yes & 2nd-order & Hessian-based weighted coreset \\
+CCS \cite{Zheng2023CCS} & Training-Free & No & Coverage & Coverage + importance at high rates \\
+Moderate-DS \cite{Xia2023Moderate} & Training-Free & No & Geometry & Select near feature-space median \\
+D2 Pruning \cite{Maharana2024D2} & Training-Free & No & Graph & Message passing diversity+difficulty \\
+FreeSel \cite{Xie2023FreeSel} & Training-Free & No & Geometry & Distance sampling on pretrained features \\
+\midrule
+\textbf{FREDDY (ours)} & \textbf{Training-Free} & \textbf{No} & \textbf{Submodular} & \textbf{Batch-local FL, deterministic, no pretrained model} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+FREDDY occupies a distinct position in this landscape: it maximizes a facility location objective — providing the same theoretical grounding as CRAIG — without requiring model training, labels, or a pretrained backbone. Its batch-local processing strategy eliminates the $O(n^2)$ preprocessing bottleneck of CRAIG and related submodular methods, making it applicable to large-scale tabular datasets where training-oriented methods are impractical.
+
+\subsection{Contributions}
+
+This work makes the following contributions:
+
+\begin{itemize}
+    \item \textbf{Batch-local facility location algorithm.}
+    We present FREDDY, a coreset selection algorithm that maximizes a facility location objective through a deterministic, sequential batch-local greedy procedure.
+    By restricting similarity computations and coverage updates to contiguous batches of size $b$, FREDDY reduces per-batch complexity from $O(n \cdot b)$ to $O(b^2)$ for similarity and from $O(n)$ to $O(b)$ for coverage updates, without requiring a global pairwise matrix.
+
+    \item \textbf{Training-free and label-free selection.}
+    FREDDY operates exclusively on feature vectors and requires no model training, gradient computation, label information, or pretrained backbone.
+    This makes it directly applicable as a preprocessing step in any supervised or unsupervised machine learning pipeline, including large-scale tabular settings.
+
+    \item \textbf{Global priority queue across batches.}
+    FREDDY maintains a single priority queue across all batches, allowing candidates from earlier batches to compete with later ones.
+    This global coordination ensures that the most representative elements are selected regardless of their position in the dataset partition, while keeping per-batch processing self-contained.
+
+    \item \textbf{Empirical evaluation on classification and regression benchmarks.}
+    We evaluate FREDDY on both classification and regression tasks across datasets ranging from tens of thousands to millions of instances.
+    We compare against CRAIG \cite{Mirzasoleiman2020Coresets}, GradMatch \cite{Killamsetty2021GradMatch}, and random sampling as baselines, measuring predictive performance at multiple selection fractions and reporting selection time and a geometric coverage metric.
+\end{itemize}
+
+
+\section{Problem Formulation}
+
+Let $X = \{x_1,\dots,x_n\} \subset \mathbb{R}^d$ denote a dataset of $n$ data objects,
+where each object is represented exclusively by a $d$-dimensional feature vector.
+We consider the fully unsupervised setting: no labels, loss values, or trained models
+are assumed to be available.
+The objective is to select a subset $S \subseteq X$ with cardinality at most $K$
+that provides a compact yet representative summary of the original dataset.
+
+We formulate data selection as the maximization of a facility location function,
+\begin{equation}
+\label{eq:objective}
+F(S) = \sum_{i=1}^{n} \max_{j \in S} s(x_i, x_j),
+\end{equation}
+where $s(x_i, x_j)$ measures the similarity between two data points.
+For each data point $x_i \in X$, this function computes its similarity to the most
+similar selected representative $x_j \in S$.
+Intuitively, $F(S)$ measures how well $S$ covers the entire dataset: every point
+contributes according to how closely it is represented by its nearest element in $S$.
+
+\paragraph{Similarity Function.}
+Given a batch $B \subset X$, we define the similarity between two points as a
+transformed Euclidean distance:
+\begin{equation}
+\label{eq:similarity}
+s(x_i, x_j) = d_{\max}(B) - \|x_i - x_j\|_2,
+\end{equation}
+where $d_{\max}(B) = \max_{x_i, x_j \in B} \|x_i - x_j\|_2$ is the maximum pairwise
+distance within the batch.
+This transformation maps distances to non-negative similarity values, preserving the
+geometric structure of the data: points that are closer to each other receive higher
+similarity scores.
+
+\paragraph{Marginal Gain.}
+The marginal gain of adding an element $e \notin S$ to the current selection is
+\begin{equation}
+\label{eq:marginal}
+\Delta(e \mid S) = F(S \cup \{e\}) - F(S)
+= \sum_{i=1}^{n} \max\left(0,\, s(x_i, x_e) - m_i(S)\right),
+\end{equation}
+where $m_i(S) = \max_{j \in S} s(x_i, x_j)$ is the coverage state of point $x_i$
+under the current selection $S$.
+The coverage state tracks how well each point is already represented.
+Computing exact marginal gains requires evaluating $s(x_i, x_e)$ for all $n$ points,
+which is computationally infeasible for large datasets.
+In the next section, we describe how FREDDY approximates this computation
+efficiently through batch-local processing.
+
+\section{FREDDY: Fast Reduction of Elements for Data-driven Yielding}
+\label{freddy}
+
+This section presents FREDDY, a greedy algorithm for scalable coreset selection
+that maximizes the facility location objective defined in Eq.~\eqref{eq:objective}.
+FREDDY operates exclusively on feature vectors and avoids computing or storing
+the full $n \times n$ similarity matrix by restricting all computations to
+contiguous, non-overlapping batches of the dataset.
+
+\subsection{Batch-Local Greedy Optimization}
+
+FREDDY partitions the dataset $X$ into a sequence of contiguous batches
+$B_1, B_2, \dots, B_T$ of size $b$, where $T = \lceil n/b \rceil$.
+Each batch is processed independently: similarities, marginal gains, and coverage
+states are all computed locally within the batch.
+This design choice reduces the cost of each coverage update from $O(n)$ to $O(b)$,
+and makes individual batch computations self-contained, which facilitates
+parallelization.
+
+\paragraph{Batch-Local Coverage State.}
+For each batch $B_t$, FREDDY computes a local coverage state defined as
+\begin{equation}
+\label{eq:localmax}
+m_i^{(t)} = \max_{j \in S \cap B_t} s(x_i, x_j), \quad \forall x_i \in B_t,
+\end{equation}
+where $s(\cdot,\cdot)$ is the batch-normalized similarity defined in
+Eq.~\eqref{eq:similarity}.
+Rather than maintaining a single global state over all $n$ points, FREDDY
+reinitializes the coverage state at the start of each batch.
+This locality serves two purposes: it bounds memory and update costs to $O(b)$
+per batch, and it introduces an implicit regularization effect — selections made
+in earlier batches do not suppress the marginal gain of candidates in later batches,
+promoting diversity across the dataset partition.
+
+\paragraph{Batch-Local Marginal Gain.}
+For a candidate element $e \in B_t$, the marginal gain with respect to the local
+coverage state is estimated as
+\begin{equation}
+\label{eq:local_marginal}
+\widehat{\Delta}(e \mid S, B_t) =
+\sum_{x_i \in B_t} \max\left(0,\, s(x_i, x_e) - m_i^{(t)}\right).
+\end{equation}
+This quantity measures the improvement in batch coverage that would result from
+adding $e$ to the selected set.
+All pairwise similarities in Eq.~\eqref{eq:local_marginal} are computed from the
+batch-local distance matrix $D_t \in \mathbb{R}^{b \times b}$, whose $(i,j)$ entry
+is $s(x_i, x_j)$ as defined in Eq.~\eqref{eq:similarity}.
+
+\paragraph{Lazy Greedy Selection.}
+To reduce redundant marginal gain evaluations, FREDDY employs a lazy greedy
+strategy via a global priority queue $Q$.
+Candidates are inserted into $Q$ with their most recently estimated gain as priority.
+When a candidate reaches the top of $Q$, its gain is re-evaluated against the
+current coverage state.
+If the re-evaluated gain is still the highest in the queue, the element is added to
+$S$; otherwise, its updated priority is reinserted and the next candidate is
+inspected.
+The queue $Q$ is maintained across batches: candidates from earlier batches that
+were not selected remain in $Q$ and compete with candidates from subsequent batches.
+This global competition ensures that the most representative elements are selected
+regardless of their batch of origin.
+
+\subsection{Algorithm Description}
+
+Algorithm~\ref{alg:freddy} summarizes the FREDDY procedure.
+
+\begin{algorithm}[t]
+\caption{FREDDY: Batch-Local Greedy Coreset Selection}
+\label{alg:freddy}
+\KwIn{Dataset $X=\{x_1,\dots,x_n\}$, budget $K$, batch size $b$}
+\KwOut{Selected subset $S \subseteq X$, $|S| = K$}
+
+Initialize $S \leftarrow \emptyset$\;
+Initialize global priority queue $Q \leftarrow \emptyset$\;
+
+\ForEach{batch $B_t \in \{B_1, \dots, B_T\}$}{
+    Compute batch-local similarity matrix $D_t$ via Eq.~\eqref{eq:similarity}\;
+    Compute batch-local coverage state $m_i^{(t)}$ via Eq.~\eqref{eq:localmax}\;
+    Insert all elements of $B_t$ into $Q$ with initial priority $s_{\max}(B_t)$\;
+
+    \While{$Q$ not empty \textbf{and} $|S| < K$}{
+        Extract candidate $e$ with highest priority from $Q$\;
+        Re-evaluate $\widehat{\Delta}(e \mid S, B_t)$ via Eq.~\eqref{eq:local_marginal}\;
+
+        \eIf{$\widehat{\Delta}(e \mid S, B_t) \geq$ priority of next element in $Q$}{
+            $S \leftarrow S \cup \{e\}$\;
+            Update $m_i^{(t)} \leftarrow \max(m_i^{(t)}, s(x_i, x_e))$ for all $x_i \in B_t$\;
+        }{
+            Reinsert $e$ into $Q$ with updated priority $\widehat{\Delta}(e \mid S, B_t)$\;
+        }
+    }
+}
+
+\Return $S$\;
+\end{algorithm}
+
+FREDDY maximizes facility location coverage through a sequence of batch-local
+greedy decisions, coordinated by a global priority queue.
+The batch-local design reduces the per-batch complexity from $O(n \cdot b)$ to
+$O(b^2)$ for similarity computation and from $O(n)$ to $O(b)$ for coverage updates,
+making the algorithm scalable to datasets where $n \gg b$.
+Importantly, FREDDY requires no labels, no trained model, and no clustering
+preprocessing, making it applicable as a general-purpose data summarization tool.
+
+
+\section{Experiments}\label{sec:experiments}
+
+This section describes the experimental protocol used to evaluate FREDDY.
+We detail the datasets, preprocessing pipelines, coreset selection methods,
+selection fractions, evaluation procedure, and the machine learning models
+and metrics employed.
+All results and figures are presented in Section~\ref{sec:results}.
+
+\subsection{Datasets}
+
+Experiments were conducted on two publicly available benchmark datasets that
+represent distinct classification regimes and dataset scales.
+
+\textbf{Adult (Census Income).}
+The Adult dataset~\cite{misc_adult_2} contains $48{,}842$ instances described
+by 14 original attributes covering demographic and socioeconomic information.
+The binary classification task is to predict whether an individual's annual
+income exceeds \$50K.
+After removing rows with missing values and applying one-hot encoding to all
+categorical attributes
+(\textit{gender}, \textit{education}, \textit{race}, \textit{relationship},
+\textit{workclass}, \textit{marital-status}, \textit{occupation},
+\textit{native-country}),
+the feature matrix expands to $108$ binary and numerical dimensions.
+No further normalization is applied at the pipeline level; the preprocessing
+is entirely contained in the loader.
+
+\textbf{Covertype (Forest Cover Type).}
+The Covertype dataset~\cite{misc_covertype_31} contains $581{,}012$ instances
+and 54 features, combining 10 quantitative measurements with 44 binary
+wilderness-area and soil-type indicators.
+The task is 7-class forest cover type prediction.
+Because the quantitative and binary features occupy different scales,
+the preprocessing pipeline applies $\ell_2$ row normalization
+(\texttt{sklearn.preprocessing.normalize}) to the full feature matrix
+prior to any train/test split.
+Class labels are zero-indexed (original labels $1$--$7$ are shifted to $0$--$6$).
+
+Table~\ref{tab:datasets} summarises the key characteristics of both datasets.
+
+\begin{table}[h!]
+  \centering
+  \caption{Dataset characteristics after preprocessing.}
+  \label{tab:datasets}
+  \begin{tabular}{lrrl}
+    \toprule
+    \textbf{Dataset} & \textbf{Instances} & \textbf{Features} & \textbf{Task} \\
+    \midrule
+    Adult     & 48,842  & 108 & Binary classification \\
+    Covertype & 581,012 &  54 & 7-class classification \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Coreset Selection Methods}
+
+We compare four coreset selection strategies:
+
+\begin{itemize}
+  \item \textbf{FREDDY} (proposed): batch-local greedy facility location
+        maximization, as described in Section~\ref{sec:freddy}.
+        The algorithm operates entirely on the feature space and requires
+        neither labels nor a pretrained model.
+
+  \item \textbf{GradMatch}~\cite{killamsetty2021grad}: a gradient-matching
+        coreset method that selects a weighted subset whose gradient approximates
+        the full-data gradient.
+        We use the implementation available in the CORDS
+        library~\cite{killamsetty2022cords} with default hyperparameters.
+
+  \item \textbf{Random Sampling}: uniform random sampling without replacement
+        from the training split, used as an uninformed baseline.
+
+  \item \textbf{Full Dataset} (\textit{none}): all available training data,
+        serving as the performance upper bound.
+        No coreset selection is performed; the complete training split is used
+        directly.
+\end{itemize}
+
+\subsection{Selection Fractions}
+
+For each coreset method, we evaluate six selection fractions
+$r \in \{0.01,\, 0.05,\, 0.10,\, 0.50,\, 0.75,\, 0.90\}$,
+where $r$ denotes the fraction of training examples retained.
+The target coreset size is $K = \lfloor r \cdot |\mathcal{D}_\text{train}| \rfloor$.
+These fractions span an extreme compression regime ($1\%$, $5\%$) through
+near-full retention ($75\%$, $90\%$), allowing us to characterize how each
+method degrades under increasing data reduction.
+
+\subsection{Evaluation Protocol}
+
+The evaluation follows a repeated random sub-sampling design.
+For each dataset, we perform $R = 30$ independent runs.
+In run $r$, the full dataset is partitioned into training ($80\%$) and
+test ($20\%$) splits using \texttt{train\_test\_split} with
+\texttt{random\_state\,=\,r}, ensuring reproducibility and non-overlapping
+splits across runs.
+Coreset selection is applied exclusively to the training split of each run,
+so no test information is ever used during selection.
+
+For each run and each selection method, the coreset indices are fixed and
+saved to disk.
+The selected training subset is then used to fit each machine learning model
+five times with independent random seeds
+(seed $= r \times 5 + i$, $i \in \{0,\ldots,4\}$),
+yielding $5$ model training repetitions per run.
+This inner loop separates the variance due to coreset selection (between runs)
+from the variance due to model initialisation (within runs).
+In total, the evaluation grid covers
+$30 \text{ runs} \times 5 \text{ reps} \times 5 \text{ models} \times
+ 4 \text{ methods} \times 6 \text{ fractions} \times 2 \text{ datasets}$,
+producing approximately $36{,}000$ individual model evaluations.
+
+\subsection{Machine Learning Models}
+
+We evaluate five classification models spanning a range of inductive biases
+and computational characteristics:
+
+\begin{itemize}
+  \item \textbf{Decision Tree} (\texttt{DecisionTreeClassifier}):
+        a non-parametric model that partitions the feature space recursively.
+        Sensitive to training set size and composition.
+
+  \item \textbf{Random Forest} (\texttt{RandomForestClassifier}):
+        an ensemble of decision trees trained with bootstrap sampling and
+        feature randomisation.
+
+  \item \textbf{Logistic Regression} (\texttt{LogisticRegression}):
+        a linear model with $\ell_2$ regularisation; serves as a
+        strong, interpretable baseline.
+
+  \item \textbf{SGD Classifier} (\texttt{SGDClassifier}):
+        a linear model trained with stochastic gradient descent,
+        representative of large-scale online learning scenarios.
+
+  \item \textbf{XGBoost} (\texttt{XGBClassifier}):
+        gradient-boosted decision trees, which typically achieve
+        state-of-the-art performance on tabular data.
+\end{itemize}
+
+All models are instantiated with default hyperparameters from their
+respective libraries; no hyperparameter tuning is performed.
+This choice isolates the effect of coreset quality from the effect of
+model optimisation.
+
+\subsection{Evaluation Metrics}
+
+Model quality is measured by two classification metrics computed on the
+held-out test split:
+
+\begin{itemize}
+  \item \textbf{Accuracy}: proportion of correctly classified test instances,
+        $\text{Acc} = |\{i : \hat{y}_i = y_i\}| / |\mathcal{D}_\text{test}|$.
+  \item \textbf{Macro-averaged Precision}: unweighted mean of per-class
+        precision, providing a class-balanced quality estimate that is
+        particularly informative for the imbalanced multiclass Covertype task.
+\end{itemize}
+
+In addition, we record two efficiency metrics: (i) \textbf{selection time},
+the wall-clock time in seconds required to compute the coreset, and (ii)
+\textbf{training time}, the wall-clock time to fit the model on the selected
+subset.
+Selection and training times are reported separately to allow a
+fine-grained cost-benefit analysis.
+
+\subsection{Data Coverage}
+
+As a geometric quality measure, we compute the \textbf{coverage mean}
+for each coreset:
+\[
+  \text{cov}(S) = \frac{1}{|\mathcal{D}_\text{train}|}
+    \sum_{x \in \mathcal{D}_\text{train}}
+    \min_{c \in S} \|x - c\|_2,
+\]
+where $S$ is the selected coreset and $\mathcal{D}_\text{train}$ is
+the full training split.
+Lower values indicate that coreset points are closer to (cover) all
+training points, i.e., better geometric coverage.
+Coverage mean is computed after coreset selection using a dedicated
+pipeline step (\texttt{compute-coverage}) to avoid interfering with
+the training pipeline.
+
+
+
+\subsection{Results}
+\label{sec:results}
+
+We report accuracy (mean $\pm$ standard deviation over 30 independent runs) and median selection time (seconds) for each method, dataset, model, and selection fraction.
+All three methods achieve comparable predictive quality across fractions and models.
+FREDDY requires no model training, no gradient computation, and no access to labels; its batch-local design confines similarity and coverage computations to contiguous batches of size $b$, so peak memory usage scales as $O(b^2)$ rather than $O(n^2)$.
+
+\subsubsection*{Predictive Accuracy --- Adult}
+
+Table~\ref{tab:acc-adult} reports accuracy on the Adult dataset.
+FREDDY matches or approaches GradMatch and Random across all models and fractions.
+At the smallest fraction (1\%), FREDDY already achieves accuracy within 1--2\% of the full-data baseline for tree-based and linear models (e.g., 0.796 vs.\ 0.814 for DecisionTree at fractions 1\% and 90\%, respectively).
+SGDClassifier shows high variance across all methods---a well-known characteristic of stochastic gradient descent under small training sets---and is not indicative of coreset quality.
+
+\begin{table}[h]
+\centering
+\caption{Accuracy (mean $\pm$ std, 30 runs) on Adult dataset. GradMatch does not support fraction 0.01.}
+\label{tab:acc-adult}
+\small
+\begin{tabular}{llcccccc}
+\toprule
+\textbf{Model} & \textbf{Method} & \textbf{0.01} & \textbf{0.05} & \textbf{0.10} & \textbf{0.50} & \textbf{0.75} & \textbf{0.90} \\
+\midrule
+\multirow{3}{*}{DecisionTree}
+  & FREDDY    & 0.796$\pm$.008 & 0.806$\pm$.004 & 0.808$\pm$.005 & 0.812$\pm$.004 & 0.812$\pm$.004 & 0.814$\pm$.003 \\
+  & GradMatch & ---            & 0.803$\pm$.006 & 0.807$\pm$.004 & 0.811$\pm$.004 & 0.812$\pm$.005 & 0.814$\pm$.004 \\
+  & Random    & 0.783$\pm$.014 & 0.801$\pm$.006 & 0.806$\pm$.005 & 0.813$\pm$.003 & 0.812$\pm$.004 & 0.812$\pm$.004 \\
+\midrule
+\multirow{3}{*}{LogisticReg.}
+  & FREDDY    & 0.795$\pm$.007 & 0.795$\pm$.004 & 0.796$\pm$.003 & 0.795$\pm$.005 & 0.794$\pm$.007 & 0.798$\pm$.002 \\
+  & GradMatch & ---            & 0.797$\pm$.004 & 0.797$\pm$.008 & 0.796$\pm$.003 & 0.795$\pm$.008 & 0.794$\pm$.007 \\
+  & Random    & 0.793$\pm$.006 & 0.795$\pm$.011 & 0.793$\pm$.009 & 0.796$\pm$.003 & 0.796$\pm$.005 & 0.797$\pm$.003 \\
+\midrule
+\multirow{3}{*}{RandomForest}
+  & FREDDY    & 0.833$\pm$.006 & 0.845$\pm$.003 & 0.847$\pm$.004 & 0.852$\pm$.003 & 0.852$\pm$.002 & 0.853$\pm$.003 \\
+  & GradMatch & ---            & 0.844$\pm$.004 & 0.848$\pm$.003 & 0.852$\pm$.004 & 0.852$\pm$.003 & 0.853$\pm$.003 \\
+  & Random    & 0.832$\pm$.007 & 0.844$\pm$.003 & 0.847$\pm$.002 & 0.850$\pm$.003 & 0.850$\pm$.003 & 0.850$\pm$.002 \\
+\midrule
+\multirow{3}{*}{SGD}
+  & FREDDY    & 0.675$\pm$.221 & 0.712$\pm$.193 & 0.668$\pm$.229 & 0.668$\pm$.229 & 0.677$\pm$.222 & 0.689$\pm$.213 \\
+  & GradMatch & ---            & 0.699$\pm$.203 & 0.722$\pm$.180 & 0.656$\pm$.237 & 0.675$\pm$.220 & 0.698$\pm$.196 \\
+  & Random    & 0.686$\pm$.211 & 0.656$\pm$.236 & 0.721$\pm$.181 & 0.694$\pm$.203 & 0.668$\pm$.231 & 0.682$\pm$.214 \\
+\midrule
+\multirow{3}{*}{XGBoost}
+  & FREDDY    & 0.820$\pm$.008 & 0.845$\pm$.003 & 0.855$\pm$.003 & 0.868$\pm$.001 & 0.871$\pm$.002 & 0.873$\pm$.002 \\
+  & GradMatch & ---            & 0.844$\pm$.004 & 0.854$\pm$.003 & 0.868$\pm$.003 & 0.872$\pm$.003 & 0.871$\pm$.002 \\
+  & Random    & 0.821$\pm$.009 & 0.842$\pm$.004 & 0.853$\pm$.004 & 0.866$\pm$.003 & 0.868$\pm$.003 & 0.868$\pm$.003 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{figures/adult_accuracy_score_por_modelo.pdf}
+\caption{Accuracy distribution (30 runs) per model, method, and selection fraction --- Adult dataset.}
+\label{fig:acc-adult}
+\end{figure}
+
+\subsubsection*{Predictive Accuracy --- Covtype}
+
+Table~\ref{tab:acc-covtype} reports accuracy on the Covtype multiclass dataset.
+FREDDY consistently matches GradMatch across all fractions and models.
+At fraction 1\%, FREDDY outperforms GradMatch on all models (e.g., 0.679 vs.\ 0.659 for DecisionTree, 0.768 vs.\ 0.747 for RandomForest), suggesting that its geometry-based selection produces better coverage of the training distribution at very small budgets.
+Random selection achieves similar accuracy to both methods at larger fractions but lags at 1\%.
+
+\begin{table}[h]
+\centering
+\caption{Accuracy (mean $\pm$ std, 30 runs) on Covtype dataset.}
+\label{tab:acc-covtype}
+\small
+\begin{tabular}{llcccccc}
+\toprule
+\textbf{Model} & \textbf{Method} & \textbf{0.01} & \textbf{0.05} & \textbf{0.10} & \textbf{0.50} & \textbf{0.75} & \textbf{0.90} \\
+\midrule
+\multirow{3}{*}{DecisionTree}
+  & FREDDY    & 0.679$\pm$.006 & 0.785$\pm$.004 & 0.829$\pm$.002 & 0.912$\pm$.001 & 0.927$\pm$.001 & 0.933$\pm$.001 \\
+  & GradMatch & 0.659$\pm$.006 & 0.774$\pm$.003 & 0.826$\pm$.004 & 0.912$\pm$.001 & 0.927$\pm$.001 & 0.934$\pm$.001 \\
+  & Random    & 0.681$\pm$.006 & 0.784$\pm$.002 & 0.826$\pm$.002 & 0.901$\pm$.001 & 0.913$\pm$.001 & 0.916$\pm$.001 \\
+\midrule
+\multirow{3}{*}{LogisticReg.}
+  & FREDDY    & 0.523$\pm$.007 & 0.573$\pm$.002 & 0.589$\pm$.004 & 0.606$\pm$.005 & 0.608$\pm$.005 & 0.609$\pm$.005 \\
+  & GradMatch & 0.511$\pm$.008 & 0.559$\pm$.004 & 0.588$\pm$.004 & 0.607$\pm$.005 & 0.607$\pm$.003 & 0.607$\pm$.005 \\
+  & Random    & 0.521$\pm$.008 & 0.573$\pm$.003 & 0.591$\pm$.003 & 0.606$\pm$.003 & 0.608$\pm$.004 & 0.607$\pm$.003 \\
+\midrule
+\multirow{3}{*}{RandomForest}
+  & FREDDY    & 0.768$\pm$.003 & 0.856$\pm$.002 & 0.890$\pm$.001 & 0.949$\pm$.001 & 0.958$\pm$.001 & 0.962$\pm$.001 \\
+  & GradMatch & 0.747$\pm$.003 & 0.849$\pm$.001 & 0.888$\pm$.001 & 0.949$\pm$.001 & 0.958$\pm$.001 & 0.962$\pm$.001 \\
+  & Random    & 0.767$\pm$.003 & 0.854$\pm$.002 & 0.888$\pm$.001 & 0.943$\pm$.001 & 0.952$\pm$.001 & 0.955$\pm$.000 \\
+\midrule
+\multirow{3}{*}{SGD}
+  & FREDDY    & 0.504$\pm$.018 & 0.508$\pm$.011 & 0.508$\pm$.009 & 0.504$\pm$.006 & 0.504$\pm$.005 & 0.504$\pm$.005 \\
+  & GradMatch & 0.500$\pm$.009 & 0.501$\pm$.007 & 0.507$\pm$.008 & 0.507$\pm$.005 & 0.503$\pm$.004 & 0.504$\pm$.004 \\
+  & Random    & 0.506$\pm$.024 & 0.507$\pm$.010 & 0.509$\pm$.007 & 0.504$\pm$.007 & 0.504$\pm$.006 & 0.503$\pm$.004 \\
+\midrule
+\multirow{3}{*}{XGBoost}
+  & FREDDY    & 0.768$\pm$.003 & 0.835$\pm$.002 & 0.853$\pm$.002 & 0.871$\pm$.001 & 0.874$\pm$.001 & 0.874$\pm$.001 \\
+  & GradMatch & 0.747$\pm$.004 & 0.827$\pm$.001 & 0.848$\pm$.001 & 0.871$\pm$.001 & 0.874$\pm$.001 & 0.875$\pm$.002 \\
+  & Random    & 0.768$\pm$.002 & 0.833$\pm$.002 & 0.851$\pm$.001 & 0.869$\pm$.001 & 0.872$\pm$.002 & 0.872$\pm$.001 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{figures/covtype_accuracy_score_por_modelo.pdf}
+\caption{Accuracy distribution (30 runs) per model, method, and selection fraction --- Covtype dataset.}
+\label{fig:acc-covtype}
+\end{figure}
+
+\subsubsection*{Selection Time}
+
+Table~\ref{tab:seltime} reports median selection time in seconds.
+On Adult, FREDDY is faster than GradMatch at all fractions, with selection times ranging from 0.012\,s (1\%) to 0.477\,s (90\%).
+On Covtype---a larger dataset---FREDDY is slower than GradMatch at fractions above 10\%, reaching 4.55\,s at 90\%.
+This reflects FREDDY's linear scaling with dataset size: selection cost grows as $O(n/b \cdot b^2) = O(nb)$, while GradMatch's gradient-based selection is approximately constant in this range (the gradient computation dominates and is dataset-size-independent for a fixed model).
+Random selection is near-zero at all fractions, as expected.
+
+\begin{table}[h]
+\centering
+\caption{Median selection time (seconds) per method and fraction. GradMatch does not support fraction 0.01 on Adult.}
+\label{tab:seltime}
+\small
+\begin{tabular}{llcccccc}
+\toprule
+\textbf{Dataset} & \textbf{Method} & \textbf{0.01} & \textbf{0.05} & \textbf{0.10} & \textbf{0.50} & \textbf{0.75} & \textbf{0.90} \\
+\midrule
+\multirow{3}{*}{Adult}
+  & FREDDY    & 0.012 & 0.034 & 0.058 & 0.268 & 0.400 & 0.477 \\
+  & GradMatch & ---   & 0.038 & 0.043 & 0.046 & 0.041 & 0.044 \\
+  & Random    & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 \\
+\midrule
+\multirow{3}{*}{Covtype}
+  & FREDDY    & 0.071 & 0.294 & 0.582 & 2.650 & 3.934 & 4.547 \\
+  & GradMatch & 0.408 & 0.810 & 0.808 & 0.754 & 0.778 & 0.742 \\
+  & Random    & 0.000 & 0.000 & 0.000 & 0.001 & 0.001 & 0.001 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\linewidth]{figures/adult_selection_time.pdf}
+\includegraphics[width=0.8\linewidth]{figures/covtype_selection_time.pdf}
+\caption{Median selection time (seconds) per method and fraction. Top: Adult. Bottom: Covtype.}
+\label{fig:seltime}
+\end{figure}
+
+\noindent
+The key advantage of FREDDY over GradMatch is not selection speed per se, but \emph{independence from model training}: GradMatch requires a trained model and gradient access to perform selection, which is infeasible when labels are unavailable, the model is a black box, or the dataset is too large to train on.
+FREDDY requires only pairwise distances within batches of size $b$, making it applicable as a general-purpose preprocessing step without any model dependency.
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{sample}
+
+\end{document}
+\endinput

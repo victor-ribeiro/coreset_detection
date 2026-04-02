@@ -156,6 +156,7 @@ var EXIT_CRITERIA = [
   { phase: 5, criterion: "all_modules", description: "All modules implemented", required: true },
   { phase: 5, criterion: "specs_consulted", description: "specs/ consulted before each module", required: true },
   { phase: 5, criterion: "s6_applied", description: "S6 applied (Tier 1/2/3 per module)", required: true },
+  { phase: 5, criterion: "ui_runnable", description: "UI implemented and accessible for manual testing, or N/A documented for backend-only projects", required: true },
   // Phase 6
   { phase: 6, criterion: "tests_passing", description: "100% tests passing", required: true },
   { phase: 6, criterion: "manual_testing", description: "Manual exploratory testing performed", required: true },
@@ -793,7 +794,7 @@ function getCompactGuidance(phase) {
       lines.push("DO: Ask questions, explore the problem, populate specs/. | DON'T: Write source code (even via terminal), jump to solutions, skip HSA levels, stop after displaying score.");
       break;
     case 1:
-      lines.push("INSTRUCTIONS P1: 4 questions (Decomposition, Interfaces, Assumptions, Negative scope). 2 AskUserQuestion calls (patterns). Granularity: each module fits in 1 AI session.");
+      lines.push("INSTRUCTIONS P1: 4 questions (Decomposition, Interfaces, Assumptions, Negative scope). 2 AskUserQuestion calls (patterns). Granularity: each module fits in 1 AI session. UI MODULE: if project requires UI, list it as an explicit named module in decomposition with its own interface contract \u2014 never as an implied extension of backend.");
       lines.push("FLOW: After recording user answers \u2192 proceed IMMEDIATELY to draft the 4 architecture answers (decomposition, interfaces, assumptions, negative scope) and present the pattern summary table. NEVER write 'I will draft X next' as text and stop \u2014 just do it.");
       lines.push("R2+R4: specs/technical,models,examples. AP3: plan decoupled sessions for P5-P6. R5: MUST DISPLAY 4 architecture answers + pattern table + tech comparison.");
       lines.push("WHEN DONE: After user confirms architecture \u2192 call update_project_spec(stack=[approved techs], outOfScope=[items NOT done], patterns=[architectural patterns], constraints=[hard constraints]), then advance_phase(), then get_phase_guidance() and begin Phase 2 immediately.");
@@ -826,7 +827,7 @@ function getCompactGuidance(phase) {
       lines.push("FLOW: [per module: consult specs/ \u2192 implement \u2192 micro-check divergence \u2192 fix if needed \u2192 next] \u2192 scope inventory \u2192 advance. NEVER write text between modules ('X/N completed', 'I will now implement X', 'Next:') \u2014 just execute the next tool call.");
       lines.push("BINDING CONSTRAINTS: The tech stack, patterns, and out-of-scope items decided in P1/P3 are HARD CONSTRAINTS \u2014 visible in the 'Decision history' above. DO NOT introduce any library, framework, runtime, or technology not explicitly selected in P1. If the decision says 'vanilla JS', do not use Node.js. If it says 'no framework', do not use one.");
       lines.push("Do NOT ask permission between files \u2014 implement autonomously. AP7: never code without reference. STOP only for blockers or >2 iter on same module.");
-      lines.push("WHEN ALL MODULES DONE: run SCOPE INVENTORY (\u26A0\uFE0F MUST DISPLAY \u2705/\u274C): 1. All P1 modules present in codebase? 2. All specs/validation requirements covered? Fix any \u274C before advancing. WHEN SCOPE INVENTORY ALL \u2705: do NOT end your response after the inventory table \u2014 your VERY NEXT action must be a tool call to advance_phase() (no text between the table and the tool call). Then call get_phase_guidance() and begin Phase 6. Never return control to the user between inventory and advance_phase().");
+      lines.push("WHEN ALL MODULES DONE: run SCOPE INVENTORY (\u26A0\uFE0F MUST DISPLAY \u2705/\u274C): 1. All P1 modules present in codebase? 2. All specs/validation requirements covered? 3. UI runnable? If UI module in P1: implemented + accessible for manual testing \u2192 mark_exit_criteria(phase=5, criterion='ui_runnable', met=true). If no UI \u2192 mark_exit_criteria(phase=5, criterion='ui_runnable', met=true, details='N/A\u2014backend-only'). Fix any \u274C before advancing. WHEN SCOPE INVENTORY ALL \u2705: do NOT end your response after the inventory table \u2014 your VERY NEXT action must be a tool call to advance_phase() (no text between the table and the tool call). Then call get_phase_guidance() and begin Phase 6. Never return control to the user between inventory and advance_phase().");
       lines.push("DO: Implement modules sequentially, micro-check divergence after each, run scope inventory before advancing. | DON'T: Validate instead of seeking divergence, introduce unapproved tech, run tests \u2014 that is Phase 6.");
       break;
     case 6:

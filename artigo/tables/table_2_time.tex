@@ -1,0 +1,43 @@
+\begin{table}\label{tab:time}
+\caption{time collection}
+\centering
+\begin{tabular}{llrrrr}
+\toprule
+ &  & \multicolumn{2}{r}{selection time} & \multicolumn{2}{r}{train time} \\
+ &  & mean & std & mean & std \\
+dataset & method &  &  &  &  \\
+\midrule
+\multirow[t]{4}{*}{adult} & craig baseline & 14.143391 & 0.296794 & 0.258933 & 0.013023 \\
+ & freddy & 1.919644 & 0.619699 & 4.273801 & 1.237878 \\
+ & gradmatch & 0.069121 & 0.010024 & 0.129778 & 0.051538 \\
+ & random sampler & 0.000181 & 0.000070 & 0.177402 & 0.092385 \\
+\cline{1-6}
+\multirow[t]{4}{*}{covtype} & craig baseline & 8544.566005 & 2828.740483 & 44.734115 & 22.107353 \\
+ & freddy & 14.053243 & 9.151141 & 17.576917 & 8.618205 \\
+ & gradmatch & 17.284867 & 1.979355 & 42.335231 & 8.675041 \\
+ & random sampler & 0.002854 & 0.005248 & 36.754150 & 5.662878 \\
+\cline{1-6}
+\multirow[t]{3}{*}{hepmass} & freddy & 74.069717 & 9.434804 & 7.065182 & 4.091896 \\
+ & gradmatch & 841.353736 & 96.649840 & 77.005456 & 20.708640 \\
+ & random sampler & 0.032822 & 0.023957 & 47.228979 & 13.880022 \\
+\cline{1-6}
+\multirow[t]{3}{*}{higgs} & freddy & 120.542918 & 13.163612 & 7.600052 & 3.548526 \\
+ & gradmatch & 902.916047 & 202.875797 & 73.820702 & 17.785803 \\
+ & random sampler & 0.274002 & 0.739536 & 68.704283 & 34.921319 \\
+\cline{1-6}
+\multirow[t]{3}{*}{predictmds} & freddy & 33.660858 & 5.349100 & 18.205619 & 3.320660 \\
+ & gradmatch & 17.239712 & 3.467844 & 4.445859 & 1.485241 \\
+ & random sampler & 0.078032 & 0.096373 & 143.401058 & 23.982587 \\
+\cline{1-6}
+\multirow[t]{4}{*}{sgemm} & craig baseline & 4159.638760 & 1547.491454 & 95.480907 & 45.041604 \\
+ & freddy & 12.265459 & 3.678497 & 35.004278 & 7.259065 \\
+ & gradmatch & 87.064759 & 17.351621 & 219.892012 & 25.292847 \\
+ & random sampler & 0.017811 & 0.043812 & 183.639640 & 21.699010 \\
+\cline{1-6}
+\multirow[t]{3}{*}{storage perf} & freddy & 43.935120 & 11.404856 & 20.186015 & 6.389723 \\
+ & gradmatch & 208.844497 & 79.585655 & 137.658974 & 31.644652 \\
+ & random sampler & 0.097274 & 0.249593 & 192.192844 & 46.323816 \\
+\cline{1-6}
+\bottomrule
+\end{tabular}
+\end{table}

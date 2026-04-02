@@ -20742,6 +20742,7 @@ var EXIT_CRITERIA = [
   { phase: 5, criterion: "all_modules", description: "All modules implemented", required: true },
   { phase: 5, criterion: "specs_consulted", description: "specs/ consulted before each module", required: true },
   { phase: 5, criterion: "s6_applied", description: "S6 applied (Tier 1/2/3 per module)", required: true },
+  { phase: 5, criterion: "ui_runnable", description: "UI implemented and accessible for manual testing, or N/A documented for backend-only projects", required: true },
   // Phase 6
   { phase: 6, criterion: "tests_passing", description: "100% tests passing", required: true },
   { phase: 6, criterion: "manual_testing", description: "Manual exploratory testing performed", required: true },
@@ -22266,6 +22267,8 @@ Read specs/technical, examples, models, design. If critical technical/scientific
 3. **Assumptions.** What does the system assume as true? Implicit assumptions are the most common source of failures. (Leveson)
 4. **Negative scope.** What does the system deliberately NOT do? Conscious limitations prevent scope creep.
 
+**If the project requires a user interface:** list it as an explicit module in the decomposition (e.g., "Web UI", "React SPA", "CLI"). Never leave UI as an implicit extension of a backend module \u2014 it must appear by name with its own interface contract and be within scope as a named deliverable.
+
 ### Granularity principle (E = I\u2080/C):
 Each module must be understandable by the AI in a SINGLE interaction. If it doesn't fit in context with its dependencies, it needs to be decomposed. Interfaces work as "executable summaries" \u2014 the AI doesn't need module B's code, only B's interface.
 
@@ -22512,6 +22515,7 @@ If creating heuristics for problems with known solutions, debugging complex logi
 After all modules are implemented, before calling advance_phase():
 1. **P1 modules present?** List every module defined in the P1 decomposition \u2014 \u2705 if present in codebase, \u274C if missing.
 2. **specs/validation covered?** List every requirement in specs/validation \u2014 \u2705 if covered by at least one module, \u274C if not.
+3. **UI runnable?** If the project has a UI module (listed in P1 decomposition): is the UI implemented and accessible for manual testing (dev server starts, main flows navigable)? \u2192 mark_exit_criteria(phase=5, criterion='ui_runnable', met=true/false, details=...). If backend-only: mark_exit_criteria(phase=5, criterion='ui_runnable', met=true, details='N/A \u2014 backend-only').
 Scope inventory = **presence/absence check only** (not quality \u2014 that is Phase 6's job).
 If any \u274C: implement the missing module/requirement before advancing.
 **CAUTION AP1:** do NOT mark \u2705 without checking \u2014 the goal is to find \u274Cs, not to confirm \u2705s.
@@ -22813,7 +22817,7 @@ async function main() {
   const server = new Server(
     {
       name: "versus-claude",
-      version: "0.4.2"
+      version: "0.4.3"
     },
     {
       capabilities: {

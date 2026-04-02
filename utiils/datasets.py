@@ -86,22 +86,29 @@ def get_pipeline(name):
     Spec: specs/technical/dataset_preprocessing.md
     """
     if name == "covtype":
-        return Pipeline([
-            ("normalize", FunctionTransformer(normalize)),
-            ("pca", PCA(n_components=15, random_state=42)),
-        ])
+        return Pipeline(
+            [
+                ("normalize", FunctionTransformer(normalize)),
+                # ("pca", PCA(n_components=15, random_state=42)),
+            ]
+        )
     if name == "bike_share":
         # FRAGILE: col indices depend on loader column order.
         # casual=col10, registered=col11 after OrdinalEncoder + get_dummies in loader.
         # If load_bike_share_dataset changes column order, update these indices.
-        return Pipeline([
-            ("scale_casual_registered", ColumnTransformer(
-                transformers=[
-                    ("minmax", MinMaxScaler(), [10, 11]),
-                ],
-                remainder="passthrough",
-            )),
-        ])
+        return Pipeline(
+            [
+                (
+                    "scale_casual_registered",
+                    ColumnTransformer(
+                        transformers=[
+                            ("minmax", MinMaxScaler(), [10, 11]),
+                        ],
+                        remainder="passthrough",
+                    ),
+                ),
+            ]
+        )
     return Pipeline([("passthrough", FunctionTransformer())])
 
 

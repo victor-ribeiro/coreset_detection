@@ -12,7 +12,11 @@
       "sklearn.pipeline.Pipeline",
       "sklearn.compose.ColumnTransformer",
       "pandas",
-      "xgboost"
+      "xgboost",
+      "scipy.stats.spearmanr",
+      "LaTeX",
+      "booktabs",
+      "tectonic 0.15.0"
     ],
     "outOfScope": [
       "ICEL term (lambda regularization)",
@@ -30,7 +34,24 @@
       "coverage on test set",
       "result.py changes for coverage_mean",
       "separate module for coverage_mean",
-      "new datasets"
+      "new datasets",
+      "reverter Algorithm 1",
+      "mudar batching para aleatório",
+      "modificar main.py além de @timeit",
+      "test_datasets.py",
+      "test_protocol.py",
+      "test_coverage.py",
+      "weighted coverage (ciclo 11)",
+      "log-sum coverage",
+      "tabelas LaTeX em result.py",
+      "figuras/plots no LaTeX (ciclo separado)",
+      "testes estatísticos inferenciais (hypothesis_test.py)",
+      "script Python como artefato entregue",
+      "conclusão (ciclo separado)",
+      "dual-axis figures (ciclo 17)",
+      "scatter coverage figures (ciclo 17)",
+      "precision_score figures (ciclo 17)",
+      "conclusão do paper (ciclo 17)"
     ],
     "patterns": [
       "Modular Monolith",
@@ -38,7 +59,10 @@
       "SRP",
       "Single-threaded",
       "KISS+YAGNI+SRP",
-      "Tier 1 (sklearn NearestNeighbors for coverage_mean)"
+      "Tier 1 (sklearn NearestNeighbors for coverage_mean)",
+      "COLOR_MAP global fixo keyed por metodo_label, usado em todos os gráficos",
+      "KISS+YAGNI — arquivo único LaTeX",
+      "Tier 1 — bibliotecas maduras apenas"
     ],
     "constraints": [
       "Interface pública de freddy() mantida",
@@ -51,23 +75,38 @@
       "hypothesis_test.py alinha colunas: metodo/metrica/fracao/valor",
       "coverage_mean computed on pipeline-transformed train features only",
       "NearestNeighbors Euclidean distance (consistent with FREDDY)",
-      "coverage_mean=nan for baseline method=none"
+      "coverage_mean=nan for baseline method=none",
+      "freddy() retorna (elapsed, ndarray) via @timeit",
+      "return_vals=True retorna (elapsed, (vals_ndarray, indices_ndarray))",
+      "sset como np.ndarray",
+      "fallback K via np.random.choice",
+      "batching sequencial intencional",
+      "Ciclo 13: result.py IN scope — coerência de cores entre visualizações",
+      "craig_baseline reside em sampling/freddy.py (não lazzy_greddy.py)",
+      "coverage_mean = mean_i(min_j d(x_i, c_j)) com euclidean NearestNeighbors — fórmula canônica final",
+      "COLOR_MAP global fixo em result.py keyed por metodo_label",
+      "tabelas geradas com booktabs (já importado)",
+      "dados de entrada: CSVs em outputs/default_experiment/",
+      "inserção manual em main.tex após linha 518",
+      "COLOR_MAP global preservado (ciclo 13)",
+      "result.py salva figuras em artigo/figures/",
+      "figuras referenciadas via \\includegraphics{figures/nome.pdf}"
     ]
   },
-  "currentPhase": 7,
+  "currentPhase": 6,
   "currentIteration": 1,
   "phase0Score": 95,
   "phase0Breakdown": {
     "clarezaProblema": 10,
     "casosDeUso": 14,
     "vocabulario": 10,
-    "ambiguidades": 15,
+    "ambiguidades": 14,
     "foraDeEscopo": 10,
     "criteriosSucesso": 10,
-    "premissas": 10,
+    "premissas": 9,
     "documentacao": 4,
     "usuarioConfirmou": 10,
-    "iaConfiante": 5
+    "iaConfiante": 4
   },
   "decisions": [
     {
@@ -321,6 +360,531 @@
       "category": "testing",
       "content": "TESTING STATUS: manual-done\nPASS: coverage_mean presente no metadata JSON e no CSV de resultados. Pipeline funcional.\nFAIL: none\nNEXT: avançar para Phase 7",
       "timestamp": "2026-03-10T19:02:22.215Z"
+    },
+    {
+      "id": "ea6112e5-fc5b-4ab6-b12d-c973499bc302",
+      "phase": "0",
+      "category": "scope",
+      "content": "DELIVERY TARGET: Produto completo — ciclo 6 alinha test_freddy.py ao novo freddy.py, restaura @timeit, adiciona fallback K, mantém batching sequencial intencional.",
+      "timestamp": "2026-03-11T18:08:48.219Z"
+    },
+    {
+      "id": "541d419a-5989-40f8-96f7-76372f5f8a36",
+      "phase": "0",
+      "category": "requirement",
+      "content": "Ciclo 6 — freddy.py reescrito pelo usuário. Escopo:\n1. sampling/freddy.py: restaurar @timeit (interface com main.py/SAMPLERS); garantir len(sset)==K com fallback aleatório; sset como np.ndarray\n2. test_freddy.py: reescrever para testar nova API (Queue+utility_score+batching sequencial) — sem importar _estimate_marginal_gain/_update_coverage\n3. Batching sequencial: intencional, não mudar\n4. return_vals=True: retornar (elapsed, (vals_ndarray, indices_ndarray))\nOut of scope: reverter Algorithm 1, mudar batching, main.py além de @timeit, test_datasets/test_protocol/test_coverage",
+      "timestamp": "2026-03-11T18:10:17.998Z"
+    },
+    {
+      "id": "eb5fb725-cb11-4535-9f47-7d25e2366043",
+      "phase": "1",
+      "category": "architecture",
+      "content": "Ciclo 6 — Arquitetura (freddy.py reescrito):\n1. sampling/freddy.py: adicionar @timeit wrapper; garantir len(sset)==K com fallback aleatório (np.random.choice dos índices não selecionados); converter sset para np.ndarray antes de retornar\n2. test_freddy.py: reescrever completamente — testar Queue, utility_score, batching sequencial, K exato, interface @timeit, return_vals, edge cases (K=0, K próximo de n)\n3. Sem _estimate_marginal_gain/_update_coverage — a nova implementação usa utility_score diretamente\n4. return_vals=True: retornar (elapsed, (np.array(vals), np.array(sset)))\nPattern: Modular Monolith, KISS+YAGNI, Single-threaded\nOut of scope: reverter Algorithm 1, mudar batching para aleatório, modificar main.py",
+      "timestamp": "2026-03-11T18:13:37.977Z"
+    },
+    {
+      "id": "10262c31-a6d1-4d1c-8300-0ab4d731093c",
+      "phase": 1,
+      "category": "architecture",
+      "content": "Ciclo 6 — Arquitetura confirmada:\n1. Padrão: Modular Monolith, KISS+YAGNI, SRP, Single-threaded\n2. Módulos: sampling/freddy.py (único arquivo), test_freddy.py\n3. Interfaces: freddy(dataset, K, alpha, batch_size, beta, return_vals, opt_threshold) → (elapsed, ndarray) via @timeit; return_vals=True → (elapsed, (vals_ndarray, indices_ndarray))\n4. Dependências: heapq (stdlib), itertools.batched, sklearn.metrics.pairwise, sampling/utils.timeit\n5. Pressupostos: dataset como np.ndarray 2D float32, K ≤ len(dataset), batch_size > 0\n6. Fora de escopo: reverter Algorithm 1, mudar batching para aleatório, modificar main.py, outros test_*.py\n7. Fallback K: np.random.choice dos índices não selecionados quando greedy retorna < K\n8. sset retornado como np.ndarray (bug a corrigir: linha 136 retorna lista quando return_vals=True)",
+      "timestamp": "2026-03-16T18:39:48.095Z"
+    },
+    {
+      "id": "1633c98e-dea6-47e9-832a-1994465bb736",
+      "phase": 2,
+      "category": "architecture",
+      "content": "ACTIVATED LENSES (Ciclo 6): Assumptions, Architectural, Implementability, Scientific, Security, Performance, Regulatory (7 universal), Migration/Coexistence (modifica freddy.py com interface pública), Sustainability/Proportionality (pairwise_distances O(b²)), Mechanical Engineering (itertools.batched Python≥3.12). NOT ACTIVATED: Resilience, UI/UX, Ethical, Process/Workflow, Governance, Observability, Control Engineering, Game Theory, Linguistics.",
+      "timestamp": "2026-03-16T18:41:10.856Z"
+    },
+    {
+      "id": "135bc0af-d096-41de-a842-a4a86f2cee8e",
+      "phase": 3,
+      "category": "architecture",
+      "content": "V(N+1) aprovado — Ciclo 6. Única mudança: freddy.py linha 136, return_vals=True agora retorna np.array(sset) em vez de lista. Structural change: 5% (1 linha, 1/2 módulos). Criticals restantes: 0. Os 4 🟡 (utility_score sem ref, pairwise O(b²), memória, Python≥3.12) aceitos como limitações conhecidas. Ação: → Phase 4.",
+      "timestamp": "2026-03-16T18:41:52.246Z"
+    },
+    {
+      "id": "f8b5c264-11af-484b-8739-0bca0126de24",
+      "phase": 6,
+      "category": "testing",
+      "content": "TESTING STATUS: automated-done\nPASS: 18/18 (test_freddy.py)\nFAIL: none (4 falhos em test_coverage.py são pré-existentes do Ciclo 5, fora do escopo do Ciclo 6)\nNEXT: manual testing — usuário deve verificar return_vals=True retorna (vals_ndarray, indices_ndarray) corretamente",
+      "timestamp": "2026-03-16T18:43:56.257Z"
+    },
+    {
+      "id": "38909d45-5608-4502-a9a8-baa56e46dfc0",
+      "phase": 6,
+      "category": "testing",
+      "content": "TESTING STATUS: manual-done\nPASS: return_vals=True retorna (elapsed, (vals_ndarray, indices_ndarray)) com tipos corretos. 18/18 testes automatizados passando.\nFAIL: none\nNEXT: avançar para Phase 7",
+      "timestamp": "2026-03-16T18:58:46.321Z"
+    },
+    {
+      "id": "4566f07a-50be-4e0a-a447-2b66a0f30f13",
+      "phase": 0,
+      "category": "scope",
+      "content": "DELIVERY TARGET: Produto completo — corrigir protocolo experimental para garantir split idêntico entre baseline e métodos de coreset.\n\nRequisitos:\n1. _train_full_dataset recebe --coreset_dir (mesmo argumento já existente)\n2. Lê train_*.npy e test_*.npy do coreset_dir — mesmos índices que os métodos de coreset\n3. Itera sobre todos os runs (N arquivos), igual a _train_on_coreset\n4. Mantém train_rep: for i in range(5)\n5. Remove train_test_split(random_state=42) de _train_full_dataset\n\nOut of scope: run.sh, result.py, hypothesis_test.py, sampling/freddy.py, test_*.py, cmd_select_coreset (split já está correto com random_state=run_idx)",
+      "timestamp": "2026-03-16T19:03:56.624Z"
+    },
+    {
+      "id": "31e7197c-6f9e-4d50-9f5f-cb45d55e1d5d",
+      "phase": 0,
+      "category": "requirement",
+      "content": "Ciclo 7 — Split unificado:\n\nProblema: _train_full_dataset usa train_test_split(random_state=42), splits diferentes dos métodos de coreset (random_state=run_idx). Comparação científica inválida.\n\nCorreção em main.py/_train_full_dataset:\n- Recebe args.coreset_dir (já existe na CLI via --coreset_dir)\n- Itera: train_sort = sorted(coreset_dir.glob(\"train_*.npy\")), test_sort = sorted(coreset_dir.glob(\"test_*.npy\"))\n- Para cada run: carrega train_idx = np.load(train_file), test_idx = np.load(test_file)\n- Aplica pipeline.fit_transform(features[train_idx]) e pipeline.transform(features[test_idx])\n- Mantém for i in range(5) com train_rep=i no CSV\n- Remove train_test_split interno\n- dataset_name lido do metadata_0.json (já disponível no coreset_dir)\n\nCSV schema: mantém colunas existentes (dataset, metodo=\"none\", fracao=1.0, metrica, valor, modelo, run, train_rep, train_time, selection_time=0, coverage_mean=nan)",
+      "timestamp": "2026-03-16T19:04:09.231Z"
+    },
+    {
+      "id": "f96c4072-29c9-4184-b0e2-69d20854ce59",
+      "phase": 1,
+      "category": "architecture",
+      "content": "Ciclo 7 — Decomposição:\n\n1. cmd_select_coreset (main.py): adicionar early-return para method=\"none\" — salva apenas train_*.npy, test_*.npy e metadata_*.json (sem chamar sampler). train_*.npy = train_idx completo (todos os índices de treino), sem seleção de coreset.\n\n2. _train_full_dataset (main.py): remover train_test_split interno. Recebe args.coreset_dir. Itera train_*.npy/test_*.npy/metadata_*.json do coreset_dir (mesmo padrão de _train_on_coreset). Para cada run: load features[train_idx], pipeline.fit_transform, for i in range(5) train_rep. Registra run=run_idx, train_rep=i no CSV.\n\nInterface cmd_select_coreset quando method=\"none\":\n- Split: train_test_split(full_set, test_size, random_state=run_idx)  — igual ao path normal\n- Salva: train_idx (completo, sem coreset), test_idx, metadata com method=\"none\", train_frac=1.0, selection_times=0, coverage_mean=nan\n- NÃO chama sampler\n\nSchema CSV _train_full_dataset: dataset, metodo=\"none\", fracao=1.0, metrica, valor, modelo, run, train_rep, train_time, selection_time=0, coverage_mean=nan\n\nOut of scope: mudar CLI args, run.sh, result.py, hypothesis_test.py, sampling/",
+      "timestamp": "2026-03-16T19:17:32.862Z"
+    },
+    {
+      "id": "5881d39b-ce16-40a0-9860-523627f21f45",
+      "phase": 2,
+      "category": "architecture",
+      "content": "ACTIVATED LENSES (Ciclo 7): Assumptions, Architectural, Implementability, Scientific, Security, Performance, Regulatory (7 universal), Migration/Coexistence (modifica main.py + dados em disco), Sustainability/Proportionality (ML), Mechanical Engineering (deps). NOT ACTIVATED: Resilience, UI/UX, Ethical, Process/Workflow, Governance, Observability, Control Engineering, Game Theory, Linguistics.",
+      "timestamp": "2026-03-16T19:18:27.505Z"
+    },
+    {
+      "id": "38a3b4a8-9145-4af5-96b1-d1fae175e004",
+      "phase": 3,
+      "category": "architecture",
+      "content": "V(N+1) aprovado — Ciclo 7. Mudanças:\n1. cmd_select_coreset: early-return para method=none — salva train_idx completo + test_idx + metadata(random_state=run_idx, method=none, frac=1.0, selection_times=0, coverage_mean=nan). Adicionar random_state ao metadata para detectar incompatibilidade.\n2. _train_full_dataset: remover train_test_split(random_state=42); ler splits do coreset_dir; iterar N runs × 5 train_reps; incluir train_rep=i no CSV.\n3. Critical resolvido: metadata inclui random_state, código valida na leitura.\nStructural change: 10%, criticals: 0. Ação: → Phase 4.",
+      "timestamp": "2026-03-16T19:19:06.556Z"
+    },
+    {
+      "id": "6d0ad28b-cdc7-4d94-b6a1-47a2db026e7a",
+      "phase": 6,
+      "category": "testing",
+      "content": "TESTING STATUS: automated-done\nPASS: 47/47 (test_freddy: 18, test_datasets: 14, test_protocol: 15)\nFAIL: none (4 falhos em test_coverage.py são pré-existentes do Ciclo 5)\nNEXT: manual testing — rodar select-coreset --method none e model-train --method none, verificar que splits são idênticos aos de outros métodos",
+      "timestamp": "2026-03-16T19:21:29.248Z"
+    },
+    {
+      "id": "a23a54fd-ffd3-43bd-b78b-4ce45e3f4740",
+      "phase": 6,
+      "category": "testing",
+      "content": "TESTING STATUS: manual-done\nPASS: select-coreset --method none funciona, splits salvos corretamente. model-train --method none lê os mesmos splits.\nFAIL: none\nNEXT: avançar para Phase 7",
+      "timestamp": "2026-03-16T20:11:16.673Z"
+    },
+    {
+      "id": "4a8ae72d-32a9-4865-8ff1-f69aa86effc6",
+      "phase": 7,
+      "category": "testing",
+      "content": "Ciclo 7 — Lições aprendidas: Split unificado funcionou corretamente. cmd_select_coreset com method=\"none\" salva train/test índices com random_state=run_idx, e _train_full_dataset os carrega do coreset_dir. Comparação científica entre baseline e métodos de coreset agora válida.",
+      "timestamp": "2026-03-16T20:18:24.028Z"
+    },
+    {
+      "id": "099e78ac-de4d-4e20-bf10-4845f5aeb68d",
+      "phase": 0,
+      "category": "scope",
+      "content": "Ciclo 8 — Scatterplot coverage_mean × métrica de qualidade em result.py. Gráfico de dispersão exploratório: x=coverage_mean, y=valor, hue=metodo_label, facetado por (dataset, metrica, modelo). Salvo em figs/scatter_coverage_{dataset}_{metrica}_{modelo}.pdf/.png. Métodos com coverage_mean=nan excluídos. Out of scope: novos arquivos, mudanças em main.py, sampling/, testes.",
+      "timestamp": "2026-03-16T20:20:44.829Z"
+    },
+    {
+      "id": "8647fa5c-3c78-4a20-b502-f4266da6e3e7",
+      "phase": 1,
+      "category": "architecture",
+      "content": "Ciclo 8 — Arquitetura:\n1. Módulo: result.py, nova seção \"Grafico 3: Dispersão coverage_mean x métrica\"\n2. Interface: lê df já carregado no topo do script; filtra metodo != \"none\" + dropna([\"coverage_mean\",\"valor\"]); loop por (dataset, metrica); subplots por modelo; sns.scatterplot(x=\"coverage_mean\", y=\"valor\", hue=\"metodo_label\", style=\"fracao\")\n3. Output: figs/scatter_coverage_{dataset}_{metrica}.pdf/.png\n4. Premissas: coverage_mean populado no CSV para métodos não-none; seaborn/matplotlib/numpy já importados\n5. Padrão: Modular Monolith, KISS+YAGNI, Single-threaded\nOut of scope: main.py, sampling/, testes, novos arquivos",
+      "timestamp": "2026-03-16T20:22:40.649Z"
+    },
+    {
+      "id": "525ebc0f-81be-49d9-a3aa-26e89f5dd30d",
+      "phase": 2,
+      "category": "architecture",
+      "content": "ACTIVATED LENSES (Ciclo 8): Assumptions, Architectural, Implementability, Scientific, Security, Performance, Regulatory (7 universal), Migration/Coexistence, Sustainability. NOT ACTIVATED: Resilience, UI/UX, Ethical, Process/Workflow, Governance, Observability, Control Engineering, Game Theory, Linguistics, Mechanical Engineering. Único achado: 🟡 df_scatter vazio sem aviso — corrigir na Phase 3 com guard clause.",
+      "timestamp": "2026-03-16T20:23:15.695Z"
+    },
+    {
+      "id": "d9f5f47c-c3a1-4bed-81d5-3d8d77f2dd8b",
+      "phase": 3,
+      "category": "architecture",
+      "content": "V(N+1) aprovado — Ciclo 8. Mudança: guard clause para df_scatter vazio (print + return). Structural change: 5% (1 linha, 1/1 módulo). Criticals restantes: 0. Ação: → Phase 4.",
+      "timestamp": "2026-03-16T20:23:46.610Z"
+    },
+    {
+      "id": "013264fb-5d91-4070-81cf-69bafad96613",
+      "phase": 6,
+      "category": "testing",
+      "content": "TESTING STATUS: manual-done\nPASS: figuras scatter_coverage_{dataset}_{metrica}.pdf/.png geradas corretamente. Bug heatmap (sns.relplot→sns.heatmap) corrigido como parte do ciclo.\nFAIL: none\nNEXT: avançar para Phase 7",
+      "timestamp": "2026-03-16T20:31:44.628Z"
+    },
+    {
+      "id": "6974f787-4043-410e-9cfe-926271d1ee93",
+      "phase": 0,
+      "category": "scope",
+      "content": "Ciclo 9 — Gráfico 3 revisado em result.py: scatterplot de coverage_mean × métrica de qualidade com linha de tendência (regressão linear). x=coverage_mean, y=valor, hue=metodo_label, facetado por (dataset, metrica). Linha de tendência por método via sns.regplot ou matplotlib polyfit. Salvo em figs/scatter_coverage_{dataset}_{metrica}.pdf/.png. Métodos com coverage_mean=nan excluídos. Out of scope: main.py, sampling/, testes, novos arquivos.",
+      "timestamp": "2026-03-17T14:03:15.009Z"
+    },
+    {
+      "id": "78479692-8f0f-462b-b99e-2652808c83d6",
+      "phase": 0,
+      "category": "requirement",
+      "content": "Ciclo 9 — Especificação do Gráfico 3:\n\nUnidade de observação: agregar por (metodo, fracao, run, modelo) — média dos 5 train_reps. Um ponto por coreset×modelo. Evita pseudorreplicação (train_reps compartilham o mesmo coverage_mean).\n\nEstrutura do gráfico:\n- Facetado por (dataset, metrica) — um figura por par\n- Subplots por modelo (como Gráfico 1)\n- x = coverage_mean (agregado), y = valor (média dos train_reps)\n- hue = metodo_label, linha de tendência por combinação (modelo, metodo) via sns.regplot (scatter=False) sobreposto ao sns.scatterplot\n- Salvo em figs/scatter_coverage_{dataset}_{metrica}.pdf/.png\n- Métodos com coverage_mean=nan excluídos (dropna antes de agregar)\n\nOut of scope: agregar por outros agrupamentos, mudar Gráfico 1/2, main.py, sampling/, testes.",
+      "timestamp": "2026-03-17T14:07:41.683Z"
+    },
+    {
+      "id": "47a6ae78-45e6-4084-ba59-8980ef37738a",
+      "phase": 1,
+      "category": "architecture",
+      "content": "Ciclo 9 — Arquitetura Gráfico 3:\n1. Agregação: groupby(dataset, metodo, metodo_label, fracao, run, modelo, metrica) → mean(valor, coverage_mean) — elimina train_rep\n2. Guard clause: df_scatter vazio → print + return\n3. Loop: (dataset, metrica) → figura; subplots por modelo\n4. Por método dentro de cada subplot: ax.scatter + sns.regplot(scatter=False, ci=None) se len(grp)>=3\n5. color_map consistente entre scatter e regplot via palette Set2\n6. Salvo em figs/scatter_coverage_{dataset}_{metrica}.pdf/.png\nPadrão: Modular Monolith, KISS+YAGNI, Single-threaded",
+      "timestamp": "2026-03-17T14:10:30.214Z"
+    },
+    {
+      "id": "8d1e2d77-7e66-459a-95fc-dc08924930f2",
+      "phase": 2,
+      "category": "architecture",
+      "content": "ACTIVATED LENSES (Ciclo 9): Assumptions, Architectural, Implementability, Scientific, Security, Performance, Regulatory (7 universal). Migration/Coexistence (modifica result.py existente). NOT ACTIVATED: Resilience, UI/UX, Ethical, Process/Workflow, Governance, Observability, Control Engineering, Game Theory, Linguistics, Mechanical Engineering, Sustainability.\n\nAchados por lente:\n- Assumptions: 🟡 grupo com <3 pontos → regplot falha silenciosamente — mitigado com guard `if len(grp)>=3`\n- Architectural: 🟢 substituição localizada, sem impacto em Gráfico 1/2\n- Implementability: 🟢 Tier 1, APIs maduras\n- Scientific: 🟢 aggregação por run elimina pseudorreplicação\n- Security: 🟢 sem risco\n- Performance: 🟢 operação local sobre df em memória\n- Regulatory: 🟢 sem risco\n- Migration/Coexistence: 🟢 substitui seção existente, mantém nome do arquivo de saída",
+      "timestamp": "2026-03-17T14:11:16.298Z"
+    },
+    {
+      "id": "20c6d66b-a8b8-428d-afd1-3f721de36bc6",
+      "phase": 3,
+      "category": "architecture",
+      "content": "V(N+1) aprovado — Ciclo 9. Mudança: substituição do Gráfico 3 em result.py por scatterplot + regplot com agregação por run. Structural change: ~5%, criticals: 0. Guard clause para grupos <3 pontos (skip regplot). Ação: → Phase 4.",
+      "timestamp": "2026-03-17T14:11:51.561Z"
+    },
+    {
+      "id": "84278172-c2ad-4951-b91f-754da6eabca8",
+      "phase": 6,
+      "category": "testing",
+      "content": "TESTING STATUS: manual-done\nPASS: Gráfico 3 gerou corretamente — scatterplot coverage_mean × métrica com linhas de tendência por método, subplots por modelo, figuras salvas em figs/scatter_coverage_{dataset}_{metrica}.pdf/.png\nFAIL: none\nNEXT: avançar para Phase 7",
+      "timestamp": "2026-03-17T15:40:13.330Z"
+    },
+    {
+      "id": "291cc445-695b-4a32-b1f8-4271879bf528",
+      "phase": 7,
+      "category": "testing",
+      "content": "Ciclo 9 — Lições aprendidas: Agregação por (metodo, fracao, run, modelo) elimina pseudorreplicação dos train_reps antes do scatter. Guard clause len(grp)>=3 previne falha silenciosa do regplot. color_map explícito garante consistência de cor entre scatter e linha de tendência.",
+      "timestamp": "2026-03-17T15:40:34.676Z"
+    },
+    {
+      "id": "dd2987de-bd81-40c9-8d9e-b125f5266eea",
+      "phase": 0,
+      "category": "scope",
+      "content": "DELIVERY TARGET: Produto completo — todos os requisitos entregues em um único ciclo.",
+      "timestamp": "2026-03-17T15:45:18.348Z"
+    },
+    {
+      "id": "3ea5c7a0-d885-4dee-bfd4-fc411ba5820d",
+      "phase": 0,
+      "category": "requirement",
+      "content": "Ciclo 10 — Gráfico 4: dual-axis (twinx) em result.py.\n- x = fracao (eixo X)\n- y esquerdo = valor (métrica do modelo), linha sólida por método\n- y direito = coverage_mean, linha tracejada por método, mesma cor\n- Facetado por (dataset, metrica) — figura por par\n- Subplots por modelo\n- Métodos sem coverage_mean (nan) plotam só a linha de valor\n- Legenda unificada no subplot idx==0\n- Salvo em figs/dual_axis_{dataset}_{metrica}.pdf/.png\n- Agregação: groupby(dataset, metodo, metodo_label, fracao, modelo, metrica) → mean(valor, coverage_mean) sobre runs e train_reps\nOut of scope: Gráficos 1/2/3, main.py, sampling/, testes",
+      "timestamp": "2026-03-17T15:46:56.600Z"
+    },
+    {
+      "id": "c50d9669-2529-4974-a8d9-5ae882c39cc1",
+      "phase": 1,
+      "category": "architecture",
+      "content": "Ciclo 10 — Arquitetura Gráfico 4 (dual-axis):\n1. Agregação: groupby(dataset, metodo, metodo_label, fracao, modelo, metrica) → mean(valor, coverage_mean) sobre runs e train_reps\n2. Guard clause: df_dual vazio → print + return\n3. Loop: (dataset, metrica) → figura; subplots por modelo\n4. Por subplot: ax = axes principal; ax2 = ax.twinx()\n5. Por método (mesma cor): ax.plot(fracao, valor, linestyle=\"-\"); ax2.plot(fracao, coverage_mean, linestyle=\"--\") se não-nan\n6. ax ylabel = METRIC_LABELS; ax2 ylabel = \"coverage_mean\"; ax2 tick color = cinza\n7. Legenda unificada: handles de ax + ax2 combinados, exibida só no idx==0\n8. Salvo em figs/dual_axis_{dataset}_{metrica}.pdf/.png\nPadrão: Modular Monolith, KISS+YAGNI, Single-threaded",
+      "timestamp": "2026-03-17T15:47:40.816Z"
+    },
+    {
+      "id": "af267d96-cef6-405c-ad33-6f90fb10ae28",
+      "phase": 2,
+      "category": "architecture",
+      "content": "ACTIVATED LENSES (Ciclo 10): 7 universais + Migration. Achado: 🟡 Assumptions — legenda unificada com twinx requer combinar handles de ax + ax2 manualmente. Mitigação: `handles1, _ = ax.get_legend_handles_labels(); handles2, _ = ax2.get_legend_handles_labels(); ax.legend(handles1+handles2)`. Criticals: 0.",
+      "timestamp": "2026-03-17T15:48:07.865Z"
+    },
+    {
+      "id": "a1673376-296e-4627-9416-f8c729f1e90b",
+      "phase": 3,
+      "category": "architecture",
+      "content": "V(N+1) aprovado — Ciclo 10. Nova seção Gráfico 4 em result.py. Structural change: ~5%, criticals: 0. Mitigação legenda twinx via handles combinados. → Phase 4.",
+      "timestamp": "2026-03-17T15:48:28.207Z"
+    },
+    {
+      "id": "17a820f8-2f22-4bb5-a9cf-dbab07621abf",
+      "phase": 6,
+      "category": "testing",
+      "content": "TESTING STATUS: manual-done\nPASS: Gráfico 4 corrigido — boxplot de valores brutos (run×train_rep) por fracao_str + linha tracejada de coverage_mean no eixo direito (twinx), por método. fracao como string categórica (Opção A). Figuras salvas em figs/dual_axis_{dataset}_{metrica}.pdf/.png\nFAIL: none\nNEXT: avançar para Phase 7",
+      "timestamp": "2026-03-17T16:21:40.119Z"
+    },
+    {
+      "id": "21d90bf1-9da6-403c-ad39-dfc3b573d4fe",
+      "phase": 7,
+      "category": "testing",
+      "content": "Ciclo 10 — Lições aprendidas: boxplot com twinx requer dois DataFrames separados (df_dual_box com valores brutos; df_dual_line agregado para coverage_mean). fracao.astype(str) necessário para eixo categórico do boxplot. Posicionamento das linhas no eixo direito via índices inteiros (fracoes_str.index(str(f))) para alinhar com categorias do boxplot.",
+      "timestamp": "2026-03-17T16:22:29.220Z"
+    },
+    {
+      "id": "199518d0-d288-4f5f-9021-c3df35bb278e",
+      "phase": 0,
+      "category": "scope",
+      "content": "DELIVERY TARGET: Produto completo — todos os requisitos entregues em um único ciclo.",
+      "timestamp": "2026-03-17T16:33:17.833Z"
+    },
+    {
+      "id": "54adb61b-5432-435a-865a-276c86a9b1dd",
+      "phase": 0,
+      "category": "requirement",
+      "content": "Ciclo 11 — Weighted coverage (substituição da fórmula, mesmo nome de coluna):\n\n- Função `compute_coverage_mean` em main.py: substituir fórmula por weighted coverage\n- Estimativa de densidade local: NearestNeighbors(n_neighbors=5) em X_train → distância ao 5º vizinho = d_k(x_i)\n- w_i = 1 / (d_k(x_i) + eps) normalizado: w_i /= w_i.sum()\n- coverage_mean = sum_i( w_i * (dmax - d_i) / (dmax - dmin) )\n  onde d_i = distância de x_i ao vizinho mais próximo no coreset\n- k_density = 5, hardcoded\n- Nome da coluna no CSV e metadata: mantém \"coverage_mean\" (sem renomear)\n- result.py: sem alterações\n- Fora de escopo: result.py, run.sh, sampling/, testes, novos parâmetros CLI",
+      "timestamp": "2026-03-17T16:33:26.524Z"
+    },
+    {
+      "id": "46d9517b-216c-4124-9f8c-15d62fd5db35",
+      "phase": 1,
+      "category": "architecture",
+      "content": "Ciclo 11 — Arquitetura weighted coverage:\n1. compute_coverage_mean(X_train, coreset_feat) — mesma assinatura\n2. Dois NearestNeighbors:\n   - nn_coreset: n_neighbors=1, fit(coreset_feat) → d_i (distância ao vizinho mais próximo no coreset)\n   - nn_density: n_neighbors=5, fit(X_train) → d_k[:,−1] (distância ao 5º vizinho = proxy de densidade)\n3. w_i = 1 / (d_k + 1e-8); w_i /= w_i.sum()\n4. coverage = sum( w_i * (dmax - d_i) / (dmax - dmin) )\n5. Guard: len(coreset_feat)==0 → return nan; dmax==dmin → return 1.0 (todos equidistantes)\n6. Docstring atualizada: descreve weighted coverage com k_density=5\nPadrão: KISS+YAGNI, Single-threaded, Tier 1",
+      "timestamp": "2026-03-17T16:35:27.887Z"
+    },
+    {
+      "id": "47ad91f8-f475-4e0c-b4d5-5f485ab2f680",
+      "phase": 2,
+      "category": "architecture",
+      "content": "ACTIVATED LENSES (Ciclo 11): 7 universais + Migration/Coexistence.\n\nAchados por lente:\n- Assumptions: 🟡 se len(X_train) < k_density+1 (=6), NearestNeighbors falha. Mitigação: k_eff = min(5, len(X_train)-1); se k_eff < 1 → return nan\n- Architectural: 🟢 substituição localizada, mesma assinatura, sem impacto em callers\n- Implementability: 🟢 Tier 1, APIs maduras, sem novas deps\n- Scientific: 🟡 dmax==dmin possível em coreset de 1 elemento. Mitigação: guard clause → return 1.0\n- Security: 🟢 sem risco\n- Performance: 🟡 dois NearestNeighbors em vez de um — custo ~2x. Aceitável pois operação offline (seleção, não treino)\n- Regulatory: 🟢 sem risco\n- Migration/Coexistence: 🟢 nome da coluna mantido; CSVs existentes incompatíveis (valores antigos), mas experimentos serão re-executados\n\nCriticals: 0. Mitigações: guard k_eff + guard dmax==dmin.",
+      "timestamp": "2026-03-17T16:36:23.370Z"
+    },
+    {
+      "id": "c9c37ef8-ddaf-4147-82a1-69a5118f37cf",
+      "phase": 3,
+      "category": "architecture",
+      "content": "V(N+1) aprovado — Ciclo 11. Mudança: substituição da fórmula em compute_coverage_mean (main.py). Structural change: ~10 linhas, criticals: 0. Guards: k_eff=min(5, len(X_train)-1); dmax==dmin → return 1.0. → Phase 4.",
+      "timestamp": "2026-03-17T16:36:56.420Z"
+    },
+    {
+      "id": "a113a232-1811-48ea-ac53-a6a70f1c516e",
+      "phase": 7,
+      "category": "testing",
+      "content": "Ciclo 11 — Lições aprendidas: weighted coverage requer dois NearestNeighbors (custo ~2x, aceitável). Guard k_eff=min(5, n-1) essencial para datasets pequenos. dmax==dmin→1.0 previne divisão por zero. Nome da coluna mantido coverage_mean — compatibilidade com result.py sem alterações.",
+      "timestamp": "2026-03-17T20:39:12.271Z"
+    },
+    {
+      "id": "c3de4410-dcf3-4d97-b3f4-354eaf6a4e97",
+      "phase": 0,
+      "category": "scope",
+      "content": "DELIVERY TARGET: Produto completo — todos os requisitos entregues em um único ciclo.",
+      "timestamp": "2026-03-17T20:43:41.753Z"
+    },
+    {
+      "id": "958fa54d-c646-4307-90fe-fa13e33638a2",
+      "phase": 0,
+      "category": "requirement",
+      "content": "Ciclo 12 — Subcomando compute-coverage (desacoplamento):\n\nMotivação: select-coreset roda um processo por (método, fração); compute_coverage_mean é custoso (2x NearestNeighbors); desacoplar permite rodar seleção rápido e calcular coverage post-hoc.\n\nMudanças em main.py:\n1. Novo subcomando `compute-coverage`:\n   - Args: --coreset_dir (diretório com train_*.npy + metadata_*.json), --dataset\n   - Para cada run: lê train_idx de train_{run}.npy, aplica pipeline.fit_transform(features[train_idx]), lê coreset_feat = features[train_idx] (índices já são o coreset), chama compute_coverage_mean, atualiza metadata_{run}.json in-place com novo coverage_mean\n   - Imprime progresso por run\n\n2. cmd_select_coreset: remove chamada a compute_coverage_mean; salva coverage_mean=nan no metadata (já era assim para method=\"none\")\n\n3. compute_coverage_mean: sem alteração de assinatura ou fórmula\n\n4. utiils/arguments.py: adicionar parser para subcomando compute-coverage com --coreset_dir e --dataset\n\nFora de escopo: result.py, run.sh, sampling/, testes, _train_on_coreset, hypothesis_test.py",
+      "timestamp": "2026-03-17T20:43:54.959Z"
+    },
+    {
+      "id": "b77d3d4c-2a40-4b4d-bddb-4a2db47c343f",
+      "phase": 0,
+      "category": "requirement",
+      "content": "Ciclo 12 — Fluxo compute-coverage (reconstrução do split via metadata):\n\nPara cada run em coreset_dir:\n1. Lê metadata_{run}.json → dataset_name, random_state, test_size\n2. train_idx_full, _ = train_test_split(full_set, test_size=metadata[\"test_size\"], random_state=metadata[\"random_state\"])\n3. train_feat = pipeline.fit_transform(features[train_idx_full])\n4. coreset_idx = np.load(\"train_{run}.npy\")  — índices do coreset no dataset original\n5. coreset_feat = pipeline.transform(features[coreset_idx])\n6. coverage = compute_coverage_mean(train_feat, coreset_feat)\n7. Atualiza metadata_{run}.json in-place: metadata[\"coverage_mean\"] = coverage\n\nArgs CLI: --coreset_dir, --dataset (test_size lido do metadata, não precisa de arg extra)\nselect-coreset: remove chamada a compute_coverage_mean; salva coverage_mean=nan",
+      "timestamp": "2026-03-17T20:49:03.738Z"
+    },
+    {
+      "id": "e77fb643-5ffe-4128-9bcd-ae6975e1253d",
+      "phase": 1,
+      "category": "architecture",
+      "content": "Ciclo 12 — Arquitetura compute-coverage:\n1. cmd_compute_coverage(args): novo função em main.py\n   - coreset_dir = Path(args.coreset_dir)\n   - features, _ = load_dataset(args.dataset); pipeline = get_pipeline(args.dataset)\n   - full_set = np.arange(len(features))\n   - Para cada metadata_{run}.json: lê random_state + test_size; reconstrói train_idx_full via train_test_split; fit_transform pipeline; transform coreset_feat; computa coverage; atualiza JSON in-place\n2. cmd_select_coreset: remove chamada a compute_coverage_mean + elapsed/indices; salva coverage_mean=nan (já era o padrão para method=\"none\")\n3. utiils/arguments.py: adiciona subparser \"compute-coverage\" com --coreset_dir (required) e --dataset (required)\n4. main.py __main__: adiciona elif args.command == \"compute-coverage\": cmd_compute_coverage(args)\nPadrão: KISS+YAGNI+SRP, Modular Monolith, Single-threaded",
+      "timestamp": "2026-03-17T20:50:05.406Z"
+    },
+    {
+      "id": "35280603-9890-4113-a659-f5f1a0712060",
+      "phase": 2,
+      "category": "architecture",
+      "content": "ACTIVATED LENSES (Ciclo 12): 7 universais + Migration/Coexistence.\nAchados:\n- Assumptions: 🟡 metadata pode não ter \"test_size\" (salvo como int, não float — train_test_split aceita ambos). Mitigação: usar metadata[\"test_size\"] diretamente.\n- Architectural: 🟢 novo comando isolado, sem impacto em cmd_select_coreset exceto remoção de 3 linhas\n- Implementability: 🟢 Tier 1\n- Scientific: 🟢 reconstrução via mesmo random_state garante split idêntico\n- Security: 🟢 sem risco\n- Performance: 🟢 custo movido para subcomando separado — objetivo do ciclo\n- Regulatory: 🟢 sem risco\n- Migration: 🟡 metadata existentes sem \"test_size\" salvo? Verificar: cmd_select_coreset salva \"test_size\": args.test_size desde Ciclo 3. OK.\nCriticals: 0.",
+      "timestamp": "2026-03-17T20:50:14.643Z"
+    },
+    {
+      "id": "c07255b9-ec3d-476d-af01-228c6f09bcd3",
+      "phase": 3,
+      "category": "architecture",
+      "content": "V(N+1) aprovado — Ciclo 12. Novo cmd_compute_coverage + remoção de compute_coverage_mean de cmd_select_coreset. Structural change: ~25 linhas add + 3 linhas remove. Criticals: 0. → Phase 4.",
+      "timestamp": "2026-03-17T20:50:19.446Z"
+    },
+    {
+      "id": "71c64ffb-b906-49db-a3b8-387f965cd88e",
+      "phase": 7,
+      "category": "testing",
+      "content": "Ciclo 12 — Lições aprendidas: desacoplamento via subcomando post-hoc é mais limpo que flag CLI. Reconstrução do split via metadata[\"random_state\"] + metadata[\"test_size\"] garante coerência sem armazenar dados extras. cmd_select_coreset simplificado: remove compute_coverage_mean, salva coverage_mean=nan.",
+      "timestamp": "2026-03-17T21:03:37.593Z"
+    },
+    {
+      "id": "bbc087f4-333f-4b06-a740-7f8dedfb03b9",
+      "phase": 0,
+      "category": "scope",
+      "content": "DELIVERY TARGET: Produto completo — todos os requisitos entregues em um único ciclo.",
+      "timestamp": "2026-03-19T16:53:18.924Z"
+    },
+    {
+      "id": "c720b4da-aac1-49c1-a9e3-206b2d26154a",
+      "phase": 0,
+      "category": "requirement",
+      "content": "Ciclo 13 — Coerência de cores entre visualizações:\n\nProblema: cada gráfico cria paleta independentemente → mesma cor atribuída a métodos diferentes entre G1/G2/G3/G4.\n\nCorreção em result.py:\n1. Definir COLOR_MAP global fixo keyed por metodo_label, usando cores explícitas de Set2:\n   - \"Freddy\" → Set2[0]\n   - \"Random\" → Set2[1]\n   - \"GradMatch\" → Set2[2]\n   - \"craig\" → Set2[3]\n   - \"none\" → cor neutra (cinza, ex: \"#b0b0b0\")\n2. Definir HUE_ORDER global = lista ordenada dos labels presentes\n3. Todos os gráficos usam COLOR_MAP + hue_order explícito:\n   - G1 (boxplot sns): palette=COLOR_MAP, hue_order=HUE_ORDER\n   - G2 (barplot sns): palette=COLOR_MAP, hue_order=HUE_ORDER\n   - G3 (scatter manual): usa color_map=COLOR_MAP diretamente (já faz lookup)\n   - G4 (dual-axis): boxplot com palette=COLOR_MAP + hue_order; linha coverage usa COLOR_MAP\n4. none recebe cor própria (cinza) e permanece nos gráficos onde já aparece (G1, G2, G4)\n\nFora de escopo: mudar tipo de gráfico, agregação, títulos, labels, main.py, sampling/, testes",
+      "timestamp": "2026-03-19T16:54:16.333Z"
+    },
+    {
+      "id": "b1eecc0b-13f8-4bcb-9483-e209e2dec048",
+      "phase": 0,
+      "category": "requirement",
+      "content": "Ciclo 13 — Feasibility e specs verificados:\n- Tier 1: sns.color_palette(\"Set2\") retorna lista de RGB; dict lookup por metodo_label; hue_order param nativo do seaborn. Sem novas deps.\n- Ambiguidades: zero. none=cinza (#b0b0b0) confirmado pelo usuário.\n- Casos de uso: (1) usuário lê G1 e G3 — mesma cor por método; (2) usuário lê G2 e G4 — mesma cor por método; (3) none aparece em G1/G2/G4 com cor cinza distinta dos métodos de coreset.\n- Vocabulário acordado: COLOR_MAP (dict global), HUE_ORDER (lista global), metodo_label (chave do mapa).\n- Fora de escopo confirmado: tipo de gráfico, agregação, títulos, labels, main.py, sampling/, testes.",
+      "timestamp": "2026-03-19T16:55:40.399Z"
+    },
+    {
+      "id": "d8ba5068-84fd-4310-a914-bc79d461f8c0",
+      "phase": 1,
+      "category": "architecture",
+      "content": "Ciclo 13 — Arquitetura COLOR_MAP:\n1. Bloco global logo após df[\"metodo_label\"] = ...:\n   _set2 = sns.color_palette(\"Set2\")\n   COLOR_MAP = {\"Freddy\": _set2[0], \"Random\": _set2[1], \"GradMatch\": _set2[2], \"craig\": _set2[3], \"none\": \"#b0b0b0\"}\n   HUE_ORDER = [k for k in COLOR_MAP if k in df[\"metodo_label\"].values]\n2. G1 (boxplot): hue_order=HUE_ORDER, palette=COLOR_MAP\n3. G2 (barplot): hue_order=HUE_ORDER, palette=COLOR_MAP\n4. G3 (scatter): color_map=COLOR_MAP (já faz lookup por metodo_label — substituir sorted() por COLOR_MAP)\n4. G4 (dual-axis boxplot): hue_order=HUE_ORDER, palette=COLOR_MAP; linhas coverage: color=COLOR_MAP.get(metodo_label)\nPadrão: KISS+YAGNI. Sem novas dependências.",
+      "timestamp": "2026-03-19T16:57:57.029Z"
+    },
+    {
+      "id": "f95f0b92-99dc-452e-830d-490a78eaf686",
+      "phase": 2,
+      "category": "architecture",
+      "content": "ACTIVATED LENSES (Ciclo 13): 7 universais.\nAchados:\n- Assumptions: 🟡 método não mapeado em COLOR_MAP → None como cor. Mitigação: COLOR_MAP.get(label, \"#888888\") em G3/G4 onde lookup é manual.\n- Architectural: 🟢 mudança localizada\n- Implementability: 🟢 Tier 1\n- Scientific: 🟢 coerência visual garantida\n- Security: 🟢\n- Performance: 🟢 O(1)\n- Regulatory: 🟢\nCriticals: 0.",
+      "timestamp": "2026-03-19T16:58:55.211Z"
+    },
+    {
+      "id": "6fede492-393a-4cee-bcae-9d7798e0a27b",
+      "phase": 3,
+      "category": "architecture",
+      "content": "V(N+1) aprovado — Ciclo 13. COLOR_MAP + HUE_ORDER globais + aplicação em G1/G2/G3/G4. Structural change: ~5% do arquivo. Criticals: 0. → Phase 4.",
+      "timestamp": "2026-03-19T16:59:50.579Z"
+    },
+    {
+      "id": "8639d201-249c-407b-a81a-82e07a90b535",
+      "phase": 0,
+      "category": "scope",
+      "content": "Ciclo 14 — Estado do código após alterações manuais do usuário. As seguintes mudanças foram feitas diretamente nos arquivos fonte e registradas como baseline para o próximo ciclo:\n\n1. sampling/freddy.py: craig_baseline migrado de lazzy_greddy.py para freddy.py (consolidação final); função entropy() adicionada; SUBMODULAR_GUARANTEE + opt_threshold como parâmetro de freddy(); utility_score() refatorada (f_norm, norma sem fator externo); dataset sem .astype(np.float32); variáveis f_current para early stopping preparado (comentado)\n2. main.py: compute_coverage_mean revertida para fórmula simples (mean distance, métrica euclidiana explícita); cmd_select_coreset refatorado com early return para method=\"none\"; random_state salvo no metadata para todos os métodos; coverage_mean=nan em select-coreset (compute-coverage separado)\n3. result.py: COLOR_MAP + HUE_ORDER globais fixos; G1/G2/G3/G4 usando palette=COLOR_MAP e hue_order filtrado; tabelas LaTeX removidas (comentadas no código)\n4. run.sh: fracoes ampliadas (0.01, 0.05, 0.1, 0.5, 0.75, 0.9); runs=30; compute-coverage fase 1.5 adicionada; somente freddy ativo (outros métodos comentados)",
+      "timestamp": "2026-04-01T18:49:47.970Z"
+    },
+    {
+      "id": "bc2916bb-3e1e-47da-b629-f2cf2f470b04",
+      "phase": 0,
+      "category": "architecture",
+      "content": "Ciclo 14 — Consolidação freddy.py: craig_baseline agora reside em sampling/freddy.py (junto com freddy). lazzy_greddy.py não é mais o arquivo canônico para craig_baseline. SAMPLERS em __init__.py deve apontar craig_baseline para sampling.freddy.craig_baseline.",
+      "timestamp": "2026-04-01T18:49:52.929Z"
+    },
+    {
+      "id": "a534ec80-6fda-4091-b324-5a286946609d",
+      "phase": 0,
+      "category": "requirement",
+      "content": "Ciclo 14 — coverage_mean: fórmula revertida para mean distance simples: mean_i(min_j d(x_i, c_j)) com NearestNeighbors(n_neighbors=1, metric=\"euclidean\"). Weighted coverage (ciclo 11) e log-sum (experimento intermediário) descartados. Esta é a fórmula canônica daqui em diante.",
+      "timestamp": "2026-04-01T18:49:57.570Z"
+    },
+    {
+      "id": "1da96e22-715e-45e2-821e-1d3c59467066",
+      "phase": 0,
+      "category": "requirement",
+      "content": "Ciclo 14 — Decisões de alinhamento artigo/implementação (canônico = implementação):\n\nD1: Batching SEQUENCIAL determinístico (não aleatório). Dataset é particionado em batches contíguos de tamanho b; cada batch é processado uma vez em ordem.\n\nD2: ICEL removido da função objetivo. F(S) = F_FL(S) apenas. λ removido do paper. opt_threshold existe na implementação como parâmetro mas não altera seleção — não mencionado no artigo.\n\nD3: Similaridade = D.max() - D onde D é matriz de distâncias euclidianas intra-batch. Não é cosine similarity.\n\nD4: localmax LOCAL ao batch (coverage state reiniciado por batch, não global). Justificativa científica: (a) reduz custo de atualização de O(n) para O(b) por batch; (b) regularização implícita — localidade evita que seleções de batches anteriores dominem o coverage state; (c) processamento disjunto dos lotes viabiliza paralelização futura.\n\nD5: Priority queue Q acumulada entre batches (não reiniciada por batch). Candidatos com alta prioridade de batches anteriores permanecem na fila.\n\nVenue: VLDB. Artigo deve descrever o algoritmo implementado com precisão e justificar cada escolha de design.",
+      "timestamp": "2026-04-01T19:03:01.324Z"
+    },
+    {
+      "id": "3b82e6d9-f3db-4f8e-adfb-3be53ed3e264",
+      "phase": 0,
+      "category": "scope",
+      "content": "Ciclo 15 — Reescrita do abstract de artigo/main.tex.\n\nDELIVERY TARGET: abstract completo e alinhado às contribuições reais do paper, pronto para submissão ao VLDB.\n\nO abstract atual está incorreto: descreve o paper como survey de coreset methods, menciona deep learning como foco principal, e contém erro de LaTeX (\\texit). Precisa ser reescrito do zero.\n\nFora de escopo: introdução, seções de conteúdo, experimentos, main.py, sampling/, result.py.",
+      "timestamp": "2026-04-02T14:17:27.614Z"
+    },
+    {
+      "id": "e0340d48-3bec-4876-900a-27c9f02ffb45",
+      "phase": 0,
+      "category": "requirement",
+      "content": "Ciclo 15 — Requisitos do abstract:\n\nConteúdo obrigatório (em ordem):\n1. Problema: custo computacional de treinamento em datasets grandes; coreset selection como solução; limitação atual = métodos eficazes requerem treinamento ou matriz O(n²)\n2. Proposta: FREDDY — algoritmo training-free de seleção de coresets via maximização de facility location com processamento batch-local determinístico\n3. Mecanismo central: batch-local greedy — similaridades e coverage state computados localmente em batches contíguos de tamanho b; reduz O(n·b) → O(b²) por batch, O(n) → O(b) para cobertura; priority queue global coordena seleção entre batches\n4. Propriedades: sem labels, sem treinamento, sem backbone pré-treinado; aplicável a datasets tabulares de grande escala\n5. Resultados: avaliado em classificação e regressão; comparado com CRAIG e GradMatch; speedup relevante em selection time; qualidade de modelo preservada\n\nEstilo VLDB: 150–200 palavras, sem bullet points, prosa contínua, sem referências bibliográficas, sem \"we show that\" redundante. Contribuição técnica no centro, não motivação genérica.",
+      "timestamp": "2026-04-02T14:17:39.897Z"
+    },
+    {
+      "id": "f0faa684-d0a8-4896-ab86-929f3eb71063",
+      "phase": 0,
+      "category": "requirement",
+      "content": "Ciclo 15 — Seção de experimentos (protocolo): estado real dos resultados disponíveis:\n- Datasets: adult, covtype (classificação binária e multiclasse)\n- Modelos: DecisionTreeClassifier, RandomForestClassifier, LogisticRegression, SGDClassifier, XGBClassifier\n- Métodos: freddy, gradmatch, random (baseline none ausente nos resultados atuais)\n- Frações: 0.01, 0.05, 0.1, 0.5, 0.75, 0.9\n- Runs: 30 (run_idx 0–29)\n- Train reps: 5 (train_rep 0–4)\n- Métricas: accuracy_score, precision_score\n- Split: 80% treino / 20% teste, random_state=run_idx\n- Total observações: 23.500 linhas CSV\n- Sem dados de regressão nos outputs atuais",
+      "timestamp": "2026-04-02T14:22:51.603Z"
+    },
+    {
+      "id": "642a4485-8b7f-490b-8824-edf1123c3283",
+      "phase": 6,
+      "category": "testing",
+      "content": "TESTING STATUS: manual-done\nPASS: abstract reescrito — compilação LaTeX sem erros (tectonic 0.15.0); todos os checks automáticos passaram (sem \\item, \\cite, \"regression\", \\texit); termos-chave presentes (Adult, Covtype, CRAIG, GradMatch, 30 runs); abstract aprovado pelo usuário via revisão visual do PDF.\nFAIL: none\nNEXT: avançar para Fase 7 e iniciar novo ciclo.",
+      "timestamp": "2026-04-02T14:46:18.938Z"
+    },
+    {
+      "id": "d89fe958-4ea7-4afe-8df1-6df8bc779cdf",
+      "phase": 6,
+      "category": "testing",
+      "content": "SPEC COVERAGE REPORT:\nCOVERED: palavra-count ~185 palavras (test_word_count) PASS; zero \\item (test_no_bullets) PASS; zero \\cite (test_no_citations) PASS; zero \"regression\" (test_no_regression) PASS; zero \\texit (test_no_texit) PASS; Adult/Covtype/CRAIG/GradMatch/30 presentes (test_keywords) PASS; compilação LaTeX sem erros (test_latex_compile) PASS; 5 elementos de conteúdo (manual) PASS.\nNOT COVERED: none\nNEGATIVE TESTS: 5 positivos / 3 negativos — ratio 1.67:1\nGAPS: none",
+      "timestamp": "2026-04-02T14:46:25.764Z"
+    },
+    {
+      "id": "d96166b2-c9c7-49d7-82c1-9974b3599c20",
+      "phase": 0,
+      "category": "scope",
+      "content": "Ciclo 16 — DELIVERY TARGET: Produto completo — todos os requisitos entregues em um único ciclo, sem divisão de escopo. Foco: continuar escrita do artigo (artigo/main.tex).",
+      "timestamp": "2026-04-02T14:48:18.610Z"
+    },
+    {
+      "id": "07b504fa-c342-4860-be63-893ad708c96f",
+      "phase": 0,
+      "category": "requirement",
+      "content": "Ciclo 16 — Posicionamento de Freddy nos resultados: o diferencial é ser training-free (sem gradientes, sem modelo pré-treinado), não velocidade bruta. GradMatch é mais rápido na seleção (0.41s vs 0.53s mediana), mas requer gradientes. A seção de resultados deve destacar: qualidade preditiva equivalente com independência de treino. O claim de speedup do abstract refere-se a métodos que requerem treinamento completo antes da seleção, não GradMatch.",
+      "timestamp": "2026-04-02T14:51:55.913Z"
+    },
+    {
+      "id": "a0943d9b-7142-478f-89b1-95e4947478d0",
+      "phase": 0,
+      "category": "requirement",
+      "content": "Ciclo 16 — Requisitos da seção de resultados:\n1. Tabelas por modelo individual (não só agregado) — 5 modelos × 2 datasets\n2. Ênfase nas frações baixas (0.01, 0.05) onde o diferencial de Freddy é mais visível\n3. Argumento de memória: Freddy é batch-local (O(b²) por batch), não carrega o dataset inteiro em memória. GradMatch requer gradientes globais; modelos de treino requerem matrizes globais. Isso deve aparecer na análise como argumento de escalabilidade.\n4. Posicionamento: qualidade equivalente + training-free + baixo footprint de memória.",
+      "timestamp": "2026-04-02T14:54:09.641Z"
+    },
+    {
+      "id": "fe8d78cd-6d39-4e05-bc7c-35146fa6e21e",
+      "phase": 2,
+      "category": "architecture",
+      "content": "ACTIVATED LENSES (Ciclo 16): 7 universais + Sustainability + Scientific.\nAchados:\n- 🟡 Scientific: tabelas com mean±std sem referência a teste estatístico. Mitigação: nota no texto indicando 30 runs independentes, CI implícito.\n- 🟡 Sustainability: valores hardcoded no LaTeX ficam obsoletos se CSVs mudarem. Mitigação: aceito — paper é artefato estático; versão é controlada por git.\nCriticals: 0.",
+      "timestamp": "2026-04-02T14:58:27.502Z"
+    },
+    {
+      "id": "2daec283-db4c-45d1-bbe3-ecaf08fb083d",
+      "phase": 2,
+      "category": "architecture",
+      "content": "LENTES CONDICIONAIS NÃO ATIVADAS (Ciclo 16) — justificativas:\n- Resilience: sem dependências externas (APIs, DBs, queues) — N/A\n- UI/UX: sem interface de usuário — N/A\n- Migration/Coexistence: sem substituição de sistema produtivo — N/A\n- Ethical/Human Impact: sem decisões automatizadas sobre pessoas — N/A\n- Process/Workflow: sem fluxo multi-ator ou máquina de estados — N/A\n- Governance/Accountability: sem múltiplos times ou dados pessoais — N/A\n- Observability/Operability: sem sistema em produção — N/A\n- Control Engineering: sem feedback loop ou correção de estado — N/A\n- Game Theory: sem múltiplos atores independentes — N/A\n- Linguistics/Grammar: sem contrato de interface entre times — N/A\n- Mechanical Engineering: sem sistema de longa vida com tolerâncias — N/A\nATIVADAS: 7 universais + Sustainability + Scientific.",
+      "timestamp": "2026-04-02T14:58:43.570Z"
+    },
+    {
+      "id": "97dece61-9a00-495f-8493-4aca459cbb22",
+      "phase": 3,
+      "category": "architecture",
+      "content": "V(N+1) aprovado — Ciclo 16. 0% mudança estrutural, 0 críticos. Mitigações aceitas: (1) nota \"30 independent runs\" no texto dos resultados; (2) valores hardcoded aceitos como característica de artefato estático. → Phase 4.",
+      "timestamp": "2026-04-02T15:02:13.625Z"
+    },
+    {
+      "id": "56aa3313-f041-4286-b1fe-136cd3007565",
+      "phase": 6,
+      "category": "testing",
+      "content": "TESTING STATUS: manual-done\nPASS: todos os checks automáticos (labels, compilação, argumentos, \\cite); validação visual do PDF pelo usuário — tabelas de accuracy (Adult, Covtype) e selection time aprovadas.\nFAIL: none\nNEXT: avançar para Fase 7.",
+      "timestamp": "2026-04-02T15:11:38.918Z"
+    },
+    {
+      "id": "cfd86441-6c36-4e8e-b9fa-f5381f6d6e27",
+      "phase": 0,
+      "category": "scope",
+      "content": "Ciclo 17 — DELIVERY TARGET: Produto completo. Foco: adicionar gráficos à seção de resultados em artigo/main.tex. Os gráficos já são gerados por result.py — o ciclo trata de integrá-los no LaTeX.",
+      "timestamp": "2026-04-02T15:14:33.343Z"
+    },
+    {
+      "id": "baf6dee0-48a3-426a-8e9f-c9c7fc76f39e",
+      "phase": 0,
+      "category": "requirement",
+      "content": "Ciclo 17 — Requisitos para integração de figuras:\n1. result.py deve gerar figuras com labels/títulos em inglês (atualmente em português: \"Fração de seleção\", \"Tempo (s)\", \"Método\")\n2. Figuras geradas devem ser copiadas para artigo/figures/\n3. main.tex deve referenciar as figuras via \\includegraphics na seção Results\nFiguras candidatas:\n- adult_accuracy_score_por_modelo.pdf (boxplot accuracy por modelo — adult)\n- covtype_accuracy_score_por_modelo.pdf (boxplot accuracy por modelo — covtype)\n- adult_selection_time.pdf (barplot selection time — adult)\n- covtype_selection_time.pdf (barplot selection time — covtype)\n- dual_axis_adult_accuracy_score.pdf (accuracy + coverage dual axis — opcional)",
+      "timestamp": "2026-04-02T15:15:12.782Z"
+    },
+    {
+      "id": "d5e828b3-ea36-4e98-aa68-034d95351d8f",
+      "phase": 2,
+      "category": "architecture",
+      "content": "ACTIVATED LENSES (Ciclo 17): 7 universais + Migration/Coexistence.\nAchados:\n- 🟡 Assumptions: strings PT podem estar em múltiplos lugares em result.py — auditar todas as ocorrências antes de editar.\n- 🟡 Migration: outros gráficos (dual-axis, scatter) ficam em PT — aceito como out-of-scope documentado.\nCriticals: 0.\nLentes não ativadas: Resilience (sem deps externas), UI/UX (sem interface), Sustainability (sem custo computacional significativo), Ethical (sem decisões sobre pessoas), Process/Workflow (sem fluxo multi-ator), Governance (sem múltiplos times), Observability (sem sistema produtivo), Control Engineering, Game Theory, Linguistics/Grammar, Mechanical Engineering.",
+      "timestamp": "2026-04-02T15:18:18.621Z"
+    },
+    {
+      "id": "004f2703-3a62-4019-af4e-a2ab01e74485",
+      "phase": 3,
+      "category": "architecture",
+      "content": "V(N+1) aprovado — Ciclo 17. 5% mudança estrutural, 0 críticos. Mitigações: (1) grep completo de strings PT antes de editar result.py; (2) outros gráficos em PT aceitos como out-of-scope. → Phase 4.",
+      "timestamp": "2026-04-02T15:18:59.221Z"
+    },
+    {
+      "id": "a8b5eee5-7f6f-4861-bc70-60e51925faa0",
+      "phase": 6,
+      "category": "testing",
+      "content": "TESTING STATUS: manual-in-progress\nPASS: todos os checks automáticos de G1/G2 (labels EN, figuras geradas, labels LaTeX, compilação). Strings PT restantes em result.py são de G3/G4 (fora de escopo do ciclo 17).\nFAIL: none\nNEXT: usuário valida visualmente as figuras no PDF (seção Results).",
+      "timestamp": "2026-04-02T15:34:26.541Z"
     }
   ],
   "exitCriteria": [
@@ -334,223 +898,193 @@
       "phase": 0,
       "criterion": "user_confirmed",
       "met": true,
-      "details": "Usuário confirmou síntese como correta."
+      "details": "Usuário confirmou escopo: result.py traduzido + 4 figuras regeneradas + integração em main.tex."
     },
     {
       "phase": 0,
       "criterion": "ambiguities_zero",
       "met": true,
-      "details": "Eficiência: NearestNeighbors. Nome: coverage_mean. Ambas resolvidas pelo usuário."
+      "details": "Nenhuma ambiguidade: figuras identificadas por nome, idioma alvo (inglês) definido, localização no LaTeX definida (seção Results)."
     },
     {
       "phase": 0,
       "criterion": "use_cases_complete",
       "met": true,
-      "details": "UC1: select-coreset computa e salva coverage_mean no metadata. UC2: model-train propaga coverage_mean para CSV. UC3: baseline method=none → coverage_mean=nan."
+      "details": "UC1: leitor vê boxplot accuracy por modelo (adult/covtype). UC2: leitor vê barplot selection time (adult/covtype). UC3: figuras compilam sem erros no LaTeX."
     },
     {
       "phase": 0,
       "criterion": "vocabulary_agreed",
       "met": true,
-      "details": "coverage_mean, coverage radius, NearestNeighbors — todos definidos e acordados."
+      "details": "Vocabulário: \"Selection fraction\" (eixo x), \"Time (s)\" (eixo y barplot), \"Accuracy\" (eixo y boxplot), \"Method\" (legenda), \"FREDDY/GradMatch/Random\" (labels dos métodos)."
     },
     {
       "phase": 0,
       "criterion": "out_of_scope_clear",
       "met": true,
-      "details": "Fora de escopo: coverage_max, P90, test set, mudanças em result.py, novos datasets."
+      "details": "Fora de escopo: dual-axis, scatter coverage, precision_score, outros datasets, conclusão do paper."
     },
     {
       "phase": 0,
       "criterion": "tech_feasibility",
       "met": true,
-      "details": "sklearn.neighbors.NearestNeighbors confirmado no ambiente (sklearn já usado em todo o projeto). API verificada: fit(coreset).kneighbors(X_train) retorna (distances, indices)."
+      "details": "result.py usa matplotlib/seaborn (strings traduzíveis). LaTeX/tectonic já compila. graphicx já importado em main.tex (usado por \\includegraphics)."
     },
     {
       "phase": 0,
       "criterion": "implementation_feasibility",
       "met": true,
-      "details": "Tier 1: NearestNeighbors (sklearn) — lib madura, aprovada. Sem Tier 3, sem PoC necessário."
+      "details": "Tier 1: matplotlib/seaborn strings são parâmetros simples. \\includegraphics é Tier 1 LaTeX. Sem Tier 3."
     },
     {
       "phase": 0,
       "criterion": "technical_scientific_research",
       "met": true,
-      "details": "Har-Peled & Mazumdar (2004) STOC — referência para coverage/k-center. Depositado em specs/technical/coverage_metric.md."
+      "details": "N/A — escopo é tradução de strings e integração de figuras. Sem algoritmos ou parâmetros científicos novos."
     },
     {
       "phase": 0,
       "criterion": "specs_populated",
       "met": true,
-      "details": "specs/technical/coverage_metric.md criado com definição, referências, implementação e integração."
+      "details": "Figuras verificadas em artigo/figures/. result.py identificado como fonte. Vocabulário inglês definido nas decisões do ciclo 17."
     },
     {
       "phase": 1,
       "criterion": "patterns_defined",
       "met": true,
-      "details": "Modular Monolith, KISS+YAGNI+SRP, Single-threaded, Tier 1 — confirmados pelo usuário."
+      "details": "KISS+YAGNI, SRP. 2 módulos independentes."
     },
     {
       "phase": 1,
       "criterion": "modules_responsibility",
       "met": true,
-      "details": "coverage_mean(): função pura, computa métrica. cmd_select_coreset: salva no metadata. _train_on_coreset: propaga para CSV. _train_full_dataset: nan baseline."
+      "details": "result.py: traduzir labels PT→EN nos 4 gráficos alvo e salvar PDFs. main.tex: inserir \\includegraphics na seção Results."
     },
     {
       "phase": 1,
       "criterion": "interfaces_defined",
       "met": true,
-      "details": "coverage_mean(X_train: np.ndarray, coreset_feat: np.ndarray) -> float. metadata[\"coverage_mean\"] float. CSV coluna \"coverage_mean\" float|nan."
+      "details": "result.py → artigo/figures/*.pdf. main.tex lê via \\includegraphics[width=\\linewidth]{figures/nome.pdf}."
     },
     {
       "phase": 1,
       "criterion": "dependencies_explicit",
       "met": true,
-      "details": "coverage_mean depende de sklearn.neighbors.NearestNeighbors (já no ambiente). cmd_select_coreset depende de coverage_mean (mesma função em main.py). _train_on_coreset depende de metadata JSON gerado por cmd_select_coreset."
+      "details": "result.py depende de: matplotlib, seaborn, pandas, CSVs. main.tex depende de: graphicx (já importado), PDFs em artigo/figures/."
     },
     {
       "phase": 1,
       "criterion": "assumptions_listed",
       "met": true,
-      "details": "A1: train_feat e coreset_feat na mesma escala (pipeline aplicado antes). A2: K >= 1. A3: distância Euclidiana consistente com FREDDY. A4: metadata JSON gerado por select-coreset antes de model-train."
+      "details": "graphicx já importado; result.py já salva em artigo/figures/; COLOR_MAP global preservado; tectonic compila PDFs incluídos sem problemas."
     },
     {
       "phase": 1,
       "criterion": "architecture_doc",
       "met": true,
-      "details": "Arquitetura cabe em ~500 tokens: 1 função pura + 3 modificações pontuais em main.py. specs/technical/coverage_metric.md documenta tudo."
+      "details": "2 módulos, ~200 tokens. Cabe em contexto único."
     },
     {
       "phase": 1,
       "criterion": "tech_100_scope",
       "met": true,
-      "details": "NearestNeighbors (sklearn) cobre 100% do escopo. API verificada. Sem lacunas tecnológicas."
+      "details": "matplotlib suporta tradução de strings. graphicx/tectonic suportam \\includegraphics com PDF. 100% do escopo coberto."
     },
     {
       "phase": 1,
       "criterion": "modules_adherent_patterns",
       "met": true,
-      "details": "coverage_mean() é função pura (SRP, KISS). Modificações em main.py são aditivas mínimas (YAGNI). Sem novos módulos desnecessários."
+      "details": "KISS+YAGNI aplicado. Sem abstrações novas. Mudanças cirúrgicas nos strings existentes."
     },
     {
       "phase": 2,
       "criterion": "activated_lenses_recorded",
       "met": true,
-      "details": "Registrado via record_decision(category=architecture): 7 universais + Migration, Sustainability, Mechanical Engineering ativadas. Resilience, UI/UX, Ethical, Observability, Control Engineering, Game Theory, Governance, Linguistics, Process/Workflow não ativadas com justificativa."
+      "details": "8 lentes ativadas (7 universais + Migration). 11 não ativadas com justificativa registrada em record_decision."
     },
     {
       "phase": 2,
       "criterion": "lenses_applied",
       "met": true,
-      "details": "10 lentes aplicadas a 4 módulos na coverage matrix."
+      "details": "Todas as 8 lentes aplicadas a result.py e main.tex."
     },
     {
       "phase": 2,
       "criterion": "coverage_matrix",
       "met": true,
-      "details": "Matriz 4 módulos × 10 lentes exibida no chat."
+      "details": "Matriz 2 módulos × 8 lentes exibida no chat."
     },
     {
       "phase": 2,
       "criterion": "criticals_identified",
       "met": true,
-      "details": "C1 🔴: _train_on_coreset — CSVs existentes sem coluna coverage_mean (schema break). 4 🟡 identificados."
+      "details": "0 críticos. 2 importantes: strings PT em múltiplos lugares + outros gráficos ficam em PT."
     },
     {
       "phase": 2,
       "criterion": "concentration_analyzed",
       "met": true,
-      "details": "Por módulo: _train_on_coreset concentra o único 🔴 (Migration). Por lente: Migration e Performance/Sustainability concentram findings — padrão de escala e compatibilidade retroativa."
+      "details": "result.py: 2 achados 🟡 concentrados em strings. main.tex: 0 achados. Sem redesign necessário."
     },
     {
       "phase": 3,
       "criterion": "criticals_addressed",
       "met": true,
-      "details": "C1 resolvido: .get(\"coverage_mean\", nan) em _train_on_coreset — sem KeyError em CSVs antigos."
+      "details": "0 críticos."
     },
     {
       "phase": 3,
       "criterion": "important_decided",
       "met": true,
-      "details": "I1: guard K=0 adicionado. I2+I3: aceito como limitação documentada. I4: aceito como-está."
+      "details": "🟡 strings PT: mitigado com grep antes de editar. 🟡 outros gráficos em PT: aceito como out-of-scope."
     },
     {
       "phase": 3,
       "criterion": "scope_preserved",
       "met": true,
-      "details": "Anti-scope-creep checklist ✅×4. Nenhuma feature adicionada. coverage_mean continua o único deliverable."
+      "details": "Checklist anti-scope-creep: 4/4 ✅."
     },
     {
       "phase": 3,
       "criterion": "architecture_simplified",
       "met": true,
-      "details": "V(N+1) mais simples que V(N): 2 guards defensivos adicionados, nenhuma complexidade nova. I2+I3 rejeitados (chunks) para manter KISS."
+      "details": "Mudanças cirúrgicas em strings. Sem complexidade adicionada."
     },
     {
       "phase": 4,
       "criterion": "exit_criteria_p2p3",
       "met": true,
-      "details": "P2: 5/5. P3: 4/4. Todos os critérios atendidos."
+      "details": "Fase 2: 5/5 met. Fase 3: 4/4 met."
     },
     {
       "phase": 4,
       "criterion": "safeguards_s1_s5",
       "met": true,
-      "details": "S2 ok, S4 ok. 0 violações."
+      "details": "0 violações, 0 warnings. S2 e S4 ok."
     },
     {
       "phase": 5,
       "criterion": "all_modules",
       "met": true,
-      "details": "compute_coverage_mean() + cmd_select_coreset + _train_on_coreset + _train_full_dataset. 45/45 testes passando."
+      "details": "2/2 módulos: result.py (labels traduzidos, 4 figuras regeneradas) + main.tex (3 \\includegraphics inseridos na seção Results)."
     },
     {
       "phase": 5,
       "criterion": "specs_consulted",
       "met": true,
-      "details": "specs/technical/coverage_metric.md consultado antes de implementar. Tier 1: NearestNeighbors aprovado em P1."
+      "details": "Figuras verificadas em artigo/figures/ antes de editar. Grep de todas as strings PT em result.py antes de traduzir."
     },
     {
       "phase": 5,
       "criterion": "s6_applied",
       "met": true,
-      "details": "Tier 1: sklearn.neighbors.NearestNeighbors — lib madura, aprovada em P1. Glue code apenas (integração em main.py)."
+      "details": "Tier 1: matplotlib strings + \\includegraphics. 2 bugs pré-existentes corrigidos (NoneType legend, ZeroDivisionError)."
     },
     {
-      "phase": 6,
-      "criterion": "tests_passing",
+      "phase": 5,
+      "criterion": "ui_runnable",
       "met": true,
-      "details": "53/53 tests passing (test_coverage.py: 8, test_datasets.py: 14, test_freddy.py: 16, test_protocol.py: 15)."
-    },
-    {
-      "phase": 6,
-      "criterion": "manual_testing",
-      "met": true,
-      "details": "Usuário confirmou: coverage_mean presente no metadata JSON e no CSV."
-    },
-    {
-      "phase": 6,
-      "criterion": "edge_cases",
-      "met": true,
-      "details": "K=0→nan, K=n→0, monotonia, metadata antigo→nan, baseline→nan. Todos cobertos."
-    },
-    {
-      "phase": 7,
-      "criterion": "specs_updated",
-      "met": true,
-      "details": "specs/validation/cycle5_results.md criado. specs/technical/coverage_metric.md já existia desde P0."
-    },
-    {
-      "phase": 7,
-      "criterion": "lessons_documented",
-      "met": true,
-      "details": "Lição: verificar APIs sklearn antes de assumir comportamento (Pipeline([])). Limitação de performance em datasets grandes documentada."
-    },
-    {
-      "phase": 7,
-      "criterion": "human_feedback",
-      "met": true,
-      "details": "Usuário confirmou: nenhuma fricção no ciclo."
+      "details": "N/A — artefato LaTeX. PDF gerado (262KB) e aprovado pelo usuário."
     }
   ],
   "safeguards": [
@@ -566,7 +1100,7 @@
       "id": "S2",
       "status": "ok",
       "details": "Stopping Criterion: behavioral check — requires agent attention. Stopping criterion belongs to the USER, not the AI.",
-      "lastChecked": "2026-03-10T18:45:11.513Z"
+      "lastChecked": "2026-04-02T15:19:39.289Z"
     },
     {
       "id": "S3",
@@ -576,7 +1110,7 @@
       "id": "S4",
       "status": "ok",
       "details": "Explicit Verification (mandatory human-AV): behavioral check — requires agent attention. Human-AV is irreplaceable at each gate. Automated tests verify formalizable properties. Semantic adequacy, usability, and domain correctness REQUIRE human judgment. P0: human validates synthesis. P2: human arbitrated trade-offs. P4: human confirms convergence. P6: NEVER assume tests passed — execute and verify + mandatory manual exploratory testing.",
-      "lastChecked": "2026-03-10T18:45:11.513Z"
+      "lastChecked": "2026-04-02T15:19:39.289Z"
     },
     {
       "id": "S5",
@@ -598,7 +1132,7 @@
     "lastSeen": ""
   },
   "createdAt": "2026-03-10T13:37:34.410Z",
-  "updatedAt": "2026-03-10T19:03:46.575Z",
+  "updatedAt": "2026-04-02T15:34:26.541Z",
   "history": [
     {
       "from": 0,
@@ -973,7 +1507,935 @@
         "manual_testing",
         "edge_cases"
       ]
+    },
+    {
+      "from": 7,
+      "to": 0,
+      "timestamp": "2026-03-11T17:13:53.470Z",
+      "criteriaMet": [
+        "specs_updated",
+        "lessons_documented",
+        "human_feedback"
+      ]
+    },
+    {
+      "from": 0,
+      "to": 1,
+      "timestamp": "2026-03-16T18:39:51.183Z",
+      "criteriaMet": [
+        "score_90",
+        "user_confirmed",
+        "ambiguities_zero",
+        "use_cases_complete",
+        "vocabulary_agreed",
+        "out_of_scope_clear",
+        "tech_feasibility",
+        "implementation_feasibility",
+        "technical_scientific_research",
+        "specs_populated"
+      ]
+    },
+    {
+      "from": 1,
+      "to": 2,
+      "timestamp": "2026-03-16T18:40:44.848Z",
+      "criteriaMet": [
+        "patterns_defined",
+        "modules_responsibility",
+        "interfaces_defined",
+        "dependencies_explicit",
+        "assumptions_listed",
+        "architecture_doc",
+        "tech_100_scope",
+        "modules_adherent_patterns"
+      ]
+    },
+    {
+      "from": 2,
+      "to": 3,
+      "timestamp": "2026-03-16T18:41:31.577Z",
+      "criteriaMet": [
+        "activated_lenses_recorded",
+        "lenses_applied",
+        "coverage_matrix",
+        "criticals_identified",
+        "concentration_analyzed"
+      ]
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "timestamp": "2026-03-16T18:42:09.750Z",
+      "criteriaMet": [
+        "criticals_addressed",
+        "important_decided",
+        "scope_preserved",
+        "architecture_simplified"
+      ]
+    },
+    {
+      "from": 4,
+      "to": 5,
+      "timestamp": "2026-03-16T18:42:42.540Z",
+      "criteriaMet": [
+        "exit_criteria_p2p3",
+        "safeguards_s1_s5"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 6,
+      "timestamp": "2026-03-16T18:43:14.253Z",
+      "criteriaMet": [
+        "all_modules",
+        "specs_consulted",
+        "s6_applied",
+        "ui_runnable"
+      ]
+    },
+    {
+      "from": 6,
+      "to": 7,
+      "timestamp": "2026-03-16T18:59:09.266Z",
+      "criteriaMet": [
+        "tests_passing",
+        "manual_testing",
+        "edge_cases"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 0,
+      "timestamp": "2026-03-16T18:59:16.672Z",
+      "criteriaMet": []
+    },
+    {
+      "from": 0,
+      "to": 1,
+      "timestamp": "2026-03-16T19:04:51.405Z",
+      "criteriaMet": [
+        "score_90",
+        "user_confirmed",
+        "ambiguities_zero",
+        "use_cases_complete",
+        "vocabulary_agreed",
+        "out_of_scope_clear",
+        "tech_feasibility",
+        "implementation_feasibility",
+        "specs_populated",
+        "technical_scientific_research"
+      ]
+    },
+    {
+      "from": 1,
+      "to": 2,
+      "timestamp": "2026-03-16T19:17:56.137Z",
+      "criteriaMet": [
+        "patterns_defined",
+        "modules_responsibility",
+        "interfaces_defined",
+        "dependencies_explicit",
+        "assumptions_listed",
+        "architecture_doc",
+        "tech_100_scope",
+        "modules_adherent_patterns"
+      ]
+    },
+    {
+      "from": 2,
+      "to": 3,
+      "timestamp": "2026-03-16T19:18:45.747Z",
+      "criteriaMet": [
+        "activated_lenses_recorded",
+        "lenses_applied",
+        "coverage_matrix",
+        "criticals_identified",
+        "concentration_analyzed"
+      ]
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "timestamp": "2026-03-16T19:19:23.053Z",
+      "criteriaMet": [
+        "criticals_addressed",
+        "important_decided",
+        "scope_preserved",
+        "architecture_simplified"
+      ]
+    },
+    {
+      "from": 4,
+      "to": 5,
+      "timestamp": "2026-03-16T19:19:48.176Z",
+      "criteriaMet": [
+        "exit_criteria_p2p3",
+        "safeguards_s1_s5"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 6,
+      "timestamp": "2026-03-16T19:20:58.692Z",
+      "criteriaMet": [
+        "all_modules",
+        "specs_consulted",
+        "s6_applied",
+        "ui_runnable"
+      ]
+    },
+    {
+      "from": 6,
+      "to": 7,
+      "timestamp": "2026-03-16T20:11:32.043Z",
+      "criteriaMet": [
+        "tests_passing",
+        "edge_cases",
+        "manual_testing"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 0,
+      "timestamp": "2026-03-16T20:18:30.900Z",
+      "criteriaMet": [
+        "human_feedback",
+        "lessons_documented",
+        "specs_updated"
+      ]
+    },
+    {
+      "from": 0,
+      "to": 1,
+      "timestamp": "2026-03-16T20:22:22.427Z",
+      "criteriaMet": [
+        "score_90",
+        "user_confirmed",
+        "ambiguities_zero",
+        "use_cases_complete",
+        "vocabulary_agreed",
+        "out_of_scope_clear",
+        "tech_feasibility",
+        "implementation_feasibility",
+        "technical_scientific_research",
+        "specs_populated"
+      ]
+    },
+    {
+      "from": 1,
+      "to": 2,
+      "timestamp": "2026-03-16T20:22:57.660Z",
+      "criteriaMet": [
+        "patterns_defined",
+        "modules_responsibility",
+        "interfaces_defined",
+        "dependencies_explicit",
+        "assumptions_listed",
+        "architecture_doc",
+        "tech_100_scope",
+        "modules_adherent_patterns"
+      ]
+    },
+    {
+      "from": 2,
+      "to": 3,
+      "timestamp": "2026-03-16T20:23:34.269Z",
+      "criteriaMet": [
+        "activated_lenses_recorded",
+        "lenses_applied",
+        "coverage_matrix",
+        "criticals_identified",
+        "concentration_analyzed"
+      ]
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "timestamp": "2026-03-16T20:23:57.987Z",
+      "criteriaMet": [
+        "criticals_addressed",
+        "important_decided",
+        "scope_preserved",
+        "architecture_simplified"
+      ]
+    },
+    {
+      "from": 4,
+      "to": 5,
+      "timestamp": "2026-03-16T20:24:12.742Z",
+      "criteriaMet": [
+        "exit_criteria_p2p3",
+        "safeguards_s1_s5"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 6,
+      "timestamp": "2026-03-16T20:31:27.917Z",
+      "criteriaMet": [
+        "all_modules",
+        "specs_consulted",
+        "s6_applied",
+        "ui_runnable"
+      ]
+    },
+    {
+      "from": 6,
+      "to": 7,
+      "timestamp": "2026-03-16T20:33:25.579Z",
+      "criteriaMet": [
+        "tests_passing",
+        "manual_testing",
+        "edge_cases"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 0,
+      "timestamp": "2026-03-17T14:03:03.060Z",
+      "criteriaMet": [
+        "human_feedback",
+        "lessons_documented",
+        "specs_updated"
+      ]
+    },
+    {
+      "from": 0,
+      "to": 1,
+      "timestamp": "2026-03-17T14:10:11.690Z",
+      "criteriaMet": [
+        "user_confirmed",
+        "score_90",
+        "ambiguities_zero",
+        "use_cases_complete",
+        "vocabulary_agreed",
+        "out_of_scope_clear",
+        "tech_feasibility",
+        "implementation_feasibility",
+        "technical_scientific_research",
+        "specs_populated"
+      ]
+    },
+    {
+      "from": 1,
+      "to": 2,
+      "timestamp": "2026-03-17T14:11:04.780Z",
+      "criteriaMet": [
+        "patterns_defined",
+        "modules_responsibility",
+        "interfaces_defined",
+        "dependencies_explicit",
+        "assumptions_listed",
+        "architecture_doc",
+        "tech_100_scope",
+        "modules_adherent_patterns"
+      ]
+    },
+    {
+      "from": 2,
+      "to": 3,
+      "timestamp": "2026-03-17T14:11:36.826Z",
+      "criteriaMet": [
+        "activated_lenses_recorded",
+        "lenses_applied",
+        "coverage_matrix",
+        "criticals_identified",
+        "concentration_analyzed"
+      ]
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "timestamp": "2026-03-17T14:12:07.533Z",
+      "criteriaMet": [
+        "criticals_addressed",
+        "important_decided",
+        "scope_preserved",
+        "architecture_simplified"
+      ]
+    },
+    {
+      "from": 4,
+      "to": 5,
+      "timestamp": "2026-03-17T14:12:23.633Z",
+      "criteriaMet": [
+        "exit_criteria_p2p3",
+        "safeguards_s1_s5"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 6,
+      "timestamp": "2026-03-17T15:40:06.406Z",
+      "criteriaMet": [
+        "all_modules",
+        "specs_consulted",
+        "s6_applied",
+        "ui_runnable"
+      ]
+    },
+    {
+      "from": 6,
+      "to": 7,
+      "timestamp": "2026-03-17T15:40:28.469Z",
+      "criteriaMet": [
+        "tests_passing",
+        "manual_testing",
+        "edge_cases"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 0,
+      "timestamp": "2026-03-17T15:45:10.593Z",
+      "criteriaMet": []
+    },
+    {
+      "from": 0,
+      "to": 1,
+      "timestamp": "2026-03-17T15:47:28.342Z",
+      "criteriaMet": [
+        "score_90",
+        "user_confirmed",
+        "ambiguities_zero",
+        "use_cases_complete",
+        "vocabulary_agreed",
+        "out_of_scope_clear",
+        "tech_feasibility",
+        "implementation_feasibility",
+        "technical_scientific_research",
+        "specs_populated"
+      ]
+    },
+    {
+      "from": 1,
+      "to": 2,
+      "timestamp": "2026-03-17T15:47:55.012Z",
+      "criteriaMet": [
+        "patterns_defined",
+        "modules_responsibility",
+        "interfaces_defined",
+        "dependencies_explicit",
+        "assumptions_listed",
+        "architecture_doc",
+        "tech_100_scope",
+        "modules_adherent_patterns"
+      ]
+    },
+    {
+      "from": 2,
+      "to": 3,
+      "timestamp": "2026-03-17T15:48:21.652Z",
+      "criteriaMet": [
+        "activated_lenses_recorded",
+        "lenses_applied",
+        "coverage_matrix",
+        "criticals_identified",
+        "concentration_analyzed"
+      ]
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "timestamp": "2026-03-17T15:48:38.048Z",
+      "criteriaMet": [
+        "criticals_addressed",
+        "important_decided",
+        "scope_preserved",
+        "architecture_simplified"
+      ]
+    },
+    {
+      "from": 4,
+      "to": 5,
+      "timestamp": "2026-03-17T15:48:52.127Z",
+      "criteriaMet": [
+        "exit_criteria_p2p3",
+        "safeguards_s1_s5"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 6,
+      "timestamp": "2026-03-17T16:22:08.715Z",
+      "criteriaMet": [
+        "all_modules",
+        "specs_consulted",
+        "s6_applied",
+        "ui_runnable"
+      ]
+    },
+    {
+      "from": 6,
+      "to": 7,
+      "timestamp": "2026-03-17T16:22:23.471Z",
+      "criteriaMet": [
+        "tests_passing",
+        "manual_testing",
+        "edge_cases"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 0,
+      "timestamp": "2026-03-17T16:29:39.414Z",
+      "criteriaMet": []
+    },
+    {
+      "from": 0,
+      "to": 1,
+      "timestamp": "2026-03-17T16:35:19.642Z",
+      "criteriaMet": [
+        "score_90",
+        "user_confirmed",
+        "ambiguities_zero",
+        "use_cases_complete",
+        "vocabulary_agreed",
+        "out_of_scope_clear",
+        "tech_feasibility",
+        "implementation_feasibility",
+        "specs_populated"
+      ]
+    },
+    {
+      "from": 1,
+      "to": 2,
+      "timestamp": "2026-03-17T16:36:11.487Z",
+      "criteriaMet": [
+        "patterns_defined",
+        "modules_responsibility",
+        "interfaces_defined",
+        "dependencies_explicit",
+        "assumptions_listed",
+        "architecture_doc",
+        "tech_100_scope",
+        "modules_adherent_patterns"
+      ]
+    },
+    {
+      "from": 2,
+      "to": 3,
+      "timestamp": "2026-03-17T16:36:49.377Z",
+      "criteriaMet": [
+        "activated_lenses_recorded",
+        "lenses_applied",
+        "coverage_matrix",
+        "criticals_identified",
+        "concentration_analyzed"
+      ]
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "timestamp": "2026-03-17T16:37:23.759Z",
+      "criteriaMet": [
+        "criticals_addressed",
+        "important_decided",
+        "scope_preserved",
+        "architecture_simplified"
+      ]
+    },
+    {
+      "from": 4,
+      "to": 5,
+      "timestamp": "2026-03-17T16:37:43.634Z",
+      "criteriaMet": [
+        "exit_criteria_p2p3",
+        "safeguards_s1_s5"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 6,
+      "timestamp": "2026-03-17T20:38:49.797Z",
+      "criteriaMet": [
+        "all_modules",
+        "specs_consulted",
+        "s6_applied",
+        "ui_runnable"
+      ]
+    },
+    {
+      "from": 6,
+      "to": 7,
+      "timestamp": "2026-03-17T20:39:05.692Z",
+      "criteriaMet": [
+        "tests_passing",
+        "manual_testing",
+        "edge_cases"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 0,
+      "timestamp": "2026-03-17T20:41:11.766Z",
+      "criteriaMet": []
+    },
+    {
+      "from": 0,
+      "to": 1,
+      "timestamp": "2026-03-17T20:49:54.581Z",
+      "criteriaMet": [
+        "score_90",
+        "user_confirmed",
+        "ambiguities_zero",
+        "use_cases_complete",
+        "vocabulary_agreed",
+        "out_of_scope_clear",
+        "tech_feasibility",
+        "implementation_feasibility",
+        "specs_populated"
+      ]
+    },
+    {
+      "from": 1,
+      "to": 2,
+      "timestamp": "2026-03-17T20:50:53.659Z",
+      "criteriaMet": [
+        "patterns_defined",
+        "modules_responsibility",
+        "interfaces_defined",
+        "dependencies_explicit",
+        "assumptions_listed",
+        "architecture_doc",
+        "tech_100_scope",
+        "modules_adherent_patterns"
+      ]
+    },
+    {
+      "from": 2,
+      "to": 3,
+      "timestamp": "2026-03-17T20:51:17.818Z",
+      "criteriaMet": [
+        "activated_lenses_recorded",
+        "lenses_applied",
+        "coverage_matrix",
+        "criticals_identified",
+        "concentration_analyzed"
+      ]
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "timestamp": "2026-03-17T20:51:38.980Z",
+      "criteriaMet": [
+        "criticals_addressed",
+        "important_decided",
+        "scope_preserved",
+        "architecture_simplified"
+      ]
+    },
+    {
+      "from": 4,
+      "to": 5,
+      "timestamp": "2026-03-17T20:51:51.704Z",
+      "criteriaMet": [
+        "exit_criteria_p2p3",
+        "safeguards_s1_s5"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 6,
+      "timestamp": "2026-03-17T21:03:16.791Z",
+      "criteriaMet": [
+        "all_modules",
+        "specs_consulted",
+        "s6_applied",
+        "ui_runnable"
+      ]
+    },
+    {
+      "from": 6,
+      "to": 7,
+      "timestamp": "2026-03-17T21:03:31.957Z",
+      "criteriaMet": [
+        "tests_passing",
+        "manual_testing",
+        "edge_cases"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 0,
+      "timestamp": "2026-03-19T15:49:57.189Z",
+      "criteriaMet": []
+    },
+    {
+      "from": 0,
+      "to": 1,
+      "timestamp": "2026-03-19T16:57:35.138Z",
+      "criteriaMet": [
+        "score_90",
+        "user_confirmed",
+        "ambiguities_zero",
+        "use_cases_complete",
+        "vocabulary_agreed",
+        "out_of_scope_clear",
+        "tech_feasibility",
+        "implementation_feasibility",
+        "specs_populated"
+      ]
+    },
+    {
+      "from": 1,
+      "to": 2,
+      "timestamp": "2026-03-19T16:58:42.554Z",
+      "criteriaMet": [
+        "architecture_defined",
+        "patterns_defined",
+        "modules_responsibility",
+        "interfaces_defined",
+        "dependencies_explicit",
+        "assumptions_listed",
+        "architecture_doc",
+        "tech_100_scope",
+        "modules_adherent_patterns"
+      ]
+    },
+    {
+      "from": 2,
+      "to": 3,
+      "timestamp": "2026-03-19T16:59:44.428Z",
+      "criteriaMet": [
+        "lenses_applied",
+        "criticals_zero",
+        "mitigations_accepted",
+        "scope_preserved",
+        "architecture_stable",
+        "activated_lenses_recorded",
+        "coverage_matrix",
+        "criticals_identified",
+        "concentration_analyzed"
+      ]
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "timestamp": "2026-03-19T17:00:47.572Z",
+      "criteriaMet": [
+        "post_cycle_decision",
+        "scope_creep_check",
+        "structural_change_computed",
+        "user_confirmed_advance",
+        "criticals_addressed",
+        "important_decided",
+        "scope_preserved",
+        "architecture_simplified"
+      ]
+    },
+    {
+      "from": 4,
+      "to": 5,
+      "timestamp": "2026-03-19T17:01:25.728Z",
+      "criteriaMet": [
+        "convergence_verified",
+        "ready_for_implementation",
+        "exit_criteria_p2p3",
+        "safeguards_s1_s5"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 6,
+      "timestamp": "2026-04-02T14:31:20.336Z",
+      "criteriaMet": [
+        "all_modules",
+        "specs_consulted",
+        "s6_applied",
+        "ui_runnable"
+      ]
+    },
+    {
+      "from": 6,
+      "to": 7,
+      "timestamp": "2026-04-02T14:46:45.216Z",
+      "criteriaMet": [
+        "tests_passing",
+        "manual_testing",
+        "edge_cases"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 0,
+      "timestamp": "2026-04-02T14:47:49.117Z",
+      "criteriaMet": [
+        "human_feedback",
+        "lessons_documented",
+        "specs_updated"
+      ]
+    },
+    {
+      "from": 0,
+      "to": 1,
+      "timestamp": "2026-04-02T14:56:40.781Z",
+      "criteriaMet": [
+        "score_90",
+        "user_confirmed",
+        "ambiguities_zero",
+        "use_cases_complete",
+        "vocabulary_agreed",
+        "out_of_scope_clear",
+        "tech_feasibility",
+        "implementation_feasibility",
+        "technical_scientific_research",
+        "specs_populated"
+      ]
+    },
+    {
+      "from": 1,
+      "to": 2,
+      "timestamp": "2026-04-02T14:58:04.272Z",
+      "criteriaMet": [
+        "patterns_defined",
+        "modules_responsibility",
+        "interfaces_defined",
+        "dependencies_explicit",
+        "assumptions_listed",
+        "architecture_doc",
+        "tech_100_scope",
+        "modules_adherent_patterns"
+      ]
+    },
+    {
+      "from": 2,
+      "to": 3,
+      "timestamp": "2026-04-02T14:59:09.251Z",
+      "criteriaMet": [
+        "activated_lenses_recorded",
+        "lenses_applied",
+        "coverage_matrix",
+        "criticals_identified",
+        "concentration_analyzed"
+      ]
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "timestamp": "2026-04-02T15:02:36.579Z",
+      "criteriaMet": [
+        "criticals_addressed",
+        "important_decided",
+        "scope_preserved",
+        "architecture_simplified"
+      ]
+    },
+    {
+      "from": 4,
+      "to": 5,
+      "timestamp": "2026-04-02T15:03:11.512Z",
+      "criteriaMet": [
+        "exit_criteria_p2p3",
+        "safeguards_s1_s5"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 6,
+      "timestamp": "2026-04-02T15:10:50.772Z",
+      "criteriaMet": [
+        "all_modules",
+        "specs_consulted",
+        "s6_applied",
+        "ui_runnable"
+      ]
+    },
+    {
+      "from": 6,
+      "to": 7,
+      "timestamp": "2026-04-02T15:11:59.421Z",
+      "criteriaMet": [
+        "tests_passing",
+        "manual_testing",
+        "edge_cases"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 0,
+      "timestamp": "2026-04-02T15:13:19.889Z",
+      "criteriaMet": [
+        "human_feedback",
+        "lessons_documented",
+        "specs_updated"
+      ]
+    },
+    {
+      "from": 0,
+      "to": 1,
+      "timestamp": "2026-04-02T15:17:05.698Z",
+      "criteriaMet": [
+        "score_90",
+        "user_confirmed",
+        "ambiguities_zero",
+        "use_cases_complete",
+        "vocabulary_agreed",
+        "out_of_scope_clear",
+        "tech_feasibility",
+        "implementation_feasibility",
+        "technical_scientific_research",
+        "specs_populated"
+      ]
+    },
+    {
+      "from": 1,
+      "to": 2,
+      "timestamp": "2026-04-02T15:18:00.627Z",
+      "criteriaMet": [
+        "patterns_defined",
+        "modules_responsibility",
+        "interfaces_defined",
+        "dependencies_explicit",
+        "assumptions_listed",
+        "architecture_doc",
+        "tech_100_scope",
+        "modules_adherent_patterns"
+      ]
+    },
+    {
+      "from": 2,
+      "to": 3,
+      "timestamp": "2026-04-02T15:18:47.730Z",
+      "criteriaMet": [
+        "activated_lenses_recorded",
+        "lenses_applied",
+        "coverage_matrix",
+        "criticals_identified",
+        "concentration_analyzed"
+      ]
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "timestamp": "2026-04-02T15:19:24.475Z",
+      "criteriaMet": [
+        "criticals_addressed",
+        "important_decided",
+        "scope_preserved",
+        "architecture_simplified"
+      ]
+    },
+    {
+      "from": 4,
+      "to": 5,
+      "timestamp": "2026-04-02T15:19:47.287Z",
+      "criteriaMet": [
+        "exit_criteria_p2p3",
+        "safeguards_s1_s5"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 6,
+      "timestamp": "2026-04-02T15:33:52.687Z",
+      "criteriaMet": [
+        "all_modules",
+        "specs_consulted",
+        "s6_applied",
+        "ui_runnable"
+      ]
     }
   ],
-  "lastPhaseStateCheck": "2026-03-10T16:13:16.841Z"
+  "lastPhaseStateCheck": "2026-04-02T14:29:58.620Z"
 }
